@@ -20,11 +20,11 @@ docker compose up -d
 ```
 
 No Linux/macOS, dentro de `api03-backend/fusex`, use `./mvnw spring-boot:run` (`chmod +x mvnw` se necessário).
-O Compose cria o MySQL 8.4 em `localhost:3306` com banco `fusex_db` e credenciais locais `spring/spring`. O Spring Boot detecta o contêiner já iniciado e espera o banco estar pronto. Ao terminar: `docker compose down`. Os dados permanecem no volume `mysql_data`.
+O Compose cria o MySQL 8.4 com banco `fusex_db` e credenciais locais `spring/spring`. O Docker escolhe uma porta local disponível para evitar conflitos com outros programas; consulte-a com `docker compose port mysql 3306`. O Spring Boot detecta essa porta automaticamente quando iniciado em `fusex/`. Ao terminar: `docker compose down`. Os dados permanecem no volume `mysql_data`.
 
 ## Verificação
 
-Com o MySQL ativo, execute `.\mvnw.cmd test` no Windows ou `./mvnw test` no Linux/macOS. O teste de contexto verifica se a aplicação inicia com o banco. Também existe um workflow de CI que executa esse teste com MySQL no GitHub Actions.
+Com o MySQL ativo, habilite a conexão automática do Compose nos testes locais (`$env:SPRING_DOCKER_COMPOSE_SKIP_IN_TESTS = 'false'` no PowerShell), depois execute `.\mvnw.cmd test` no Windows ou `./mvnw test` no Linux/macOS. O teste de contexto verifica se a aplicação inicia com o banco. O workflow de CI executa o mesmo teste com seu próprio MySQL.
 
 ## Banco de dados
 
