@@ -1,7 +1,6 @@
 services:
   mysql:
     image: mysql:8.4
-    container_name: mysql-spring
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -9,9 +8,15 @@ services:
       MYSQL_USER: spring
       MYSQL_PASSWORD: spring
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysql -h 127.0.0.1 -u spring -pspring -D fusex_db -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 volumes:
   mysql_data:
