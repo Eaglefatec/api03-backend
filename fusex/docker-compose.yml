@@ -8,7 +8,8 @@ services:
       MYSQL_USER: spring
       MYSQL_PASSWORD: spring
     ports:
-      - "127.0.0.1:3306:3306"
+      - target: 3306
+        host_ip: 127.0.0.1
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
