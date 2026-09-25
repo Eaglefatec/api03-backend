@@ -33,6 +33,12 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: fusex/pom.xml
+      - name: Verify Compose with port 3306 occupied
+        working-directory: fusex
+        run: |
+          docker compose up -d --wait
+          docker compose port mysql 3306
+          docker compose down
       - name: Test application with MySQL
         working-directory: fusex
         env:
