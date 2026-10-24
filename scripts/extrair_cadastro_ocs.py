@@ -2,7 +2,7 @@ import csv
 import re
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 CONTEXTO_DIR = BASE_DIR / "contexto"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "src" / "main" / "resources" / "data"
 
