@@ -6,8 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class FusexApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(FusexApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(FusexApplication.class, args);
+    }
 }

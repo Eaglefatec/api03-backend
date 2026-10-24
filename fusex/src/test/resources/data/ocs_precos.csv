@@ -1,0 +1,3 @@
+ocs_nome;ocs_tipo;ocs_contrato_numero;ocs_inicio_vigencia;ocs_termino_vigencia;especialidades;proc_codigo_dgp;proc_origem;proc_descricao;valor;tabela_referencia;descricao_grupo
+CLINICA TESTE;OCS;01/2023;2023-01-01;2028-01-01;CARDIOLOGISTA;10101012;TUSS;Consulta em consultorio;60;;Cardiologia
+CLINICA TESTE;OCS;01/2023;2023-01-01;2028-01-01;CARDIOLOGISTA;LOCAL-000001;OCS_LOCAL;ECG;21;CBHPM 2012;Exames complementares
