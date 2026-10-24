@@ -1,0 +1,2 @@
+ALTER TABLE paciente ADD COLUMN idade INT NULL;
+ALTER TABLE paciente ADD COLUMN telefone VARCHAR(20) NULL;

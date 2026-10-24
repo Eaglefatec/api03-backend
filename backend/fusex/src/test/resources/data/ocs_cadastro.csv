@@ -1,0 +1,3 @@
+ocs_nome;ocs_inscricao_federal;ocs_endereco;ocs_endereco_numero;ocs_endereco_bairro;ocs_endereco_cidade;ocs_endereco_uf;ocs_endereco_cep;ocs_contato_telefone
+CLINICA TESTE;18674947000224;Rua Teste;100;Centro;Cidade Teste;SP;12000000;1234567890
+CLINICA SEM CADASTRO PREVIO;99999999000199;Rua Nao Deve Importar;1;Bairro;Cidade;SP;99999999;9999999999
