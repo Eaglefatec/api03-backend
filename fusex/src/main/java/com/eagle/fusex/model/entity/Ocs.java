@@ -3,6 +3,7 @@ package com.eagle.fusex.model.entity;
 import com.eagle.fusex.model.enums.Especialidade;
 import com.eagle.fusex.model.enums.TipoOcs;
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -70,6 +71,7 @@ public class Ocs {
     @Enumerated(EnumType.STRING)
     private Set<Especialidade> especialidades = new HashSet<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "ocs")
     private Set<OcsProcedimento> ocsProcedimentos = new HashSet<>();
 

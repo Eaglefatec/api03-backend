@@ -3,6 +3,7 @@ package com.eagle.fusex.model.entity;
 import com.eagle.fusex.model.enums.StatusGuia;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -24,6 +25,18 @@ public class Guia {
 
     @Column(name = "beneficiario_prec_cp", nullable = false)
     private String beneficiarioPrecCp;
+
+    @Column(name = "beneficiario_nome")
+    private String beneficiarioNome;
+
+    @Column(name = "codigo_tuss")
+    private String codigoTuss;
+
+    @Column(name = "valor_contratado", nullable = false)
+    private BigDecimal valorContratado = BigDecimal.ZERO;
+
+    @Column(name = "valor_faturado", nullable = false)
+    private BigDecimal valorFaturado = BigDecimal.ZERO;
 
     @Column(name = "data_atendimento", nullable = false)
     private LocalDate dataAtendimento;
@@ -89,6 +102,38 @@ public class Guia {
 
     public void setBeneficiarioPrecCp(String beneficiarioPrecCp) {
         this.beneficiarioPrecCp = beneficiarioPrecCp;
+    }
+
+    public String getBeneficiarioNome() {
+        return beneficiarioNome;
+    }
+
+    public void setBeneficiarioNome(String beneficiarioNome) {
+        this.beneficiarioNome = beneficiarioNome;
+    }
+
+    public String getCodigoTuss() {
+        return codigoTuss;
+    }
+
+    public void setCodigoTuss(String codigoTuss) {
+        this.codigoTuss = codigoTuss;
+    }
+
+    public BigDecimal getValorContratado() {
+        return valorContratado;
+    }
+
+    public void setValorContratado(BigDecimal valorContratado) {
+        this.valorContratado = valorContratado;
+    }
+
+    public BigDecimal getValorFaturado() {
+        return valorFaturado;
+    }
+
+    public void setValorFaturado(BigDecimal valorFaturado) {
+        this.valorFaturado = valorFaturado;
     }
 
     public LocalDate getDataAtendimento() {

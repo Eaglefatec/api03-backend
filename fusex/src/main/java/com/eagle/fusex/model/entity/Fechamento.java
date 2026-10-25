@@ -14,7 +14,7 @@ public class Fechamento {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ocs_id", nullable = false)
     private Ocs ocs;
 
