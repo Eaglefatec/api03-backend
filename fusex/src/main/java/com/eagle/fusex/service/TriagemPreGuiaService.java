@@ -102,7 +102,6 @@ public class TriagemPreGuiaService {
 
         TriagemPreGuia triagem = new TriagemPreGuia();
         triagem.setSolicitacaoMedica(solicitacao);
-        triagem.setCpfPrec(request.getCpfPrec());
         triagem.setIdade(request.getIdade());
         triagem.setTelefone(request.getTelefone());
         triagem.setOcs(ocs);

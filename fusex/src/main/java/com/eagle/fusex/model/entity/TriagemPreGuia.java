@@ -16,9 +16,6 @@ public class TriagemPreGuia {
     @JoinColumn(name = "solicitacao_id", nullable = false, unique = true)
     private SolicitacaoMedica solicitacaoMedica;
 
-    @Column(nullable = false, length = 20)
-    private String cpfPrec;
-
     @Column(nullable = false)
     private Integer idade;
 
@@ -57,14 +54,6 @@ public class TriagemPreGuia {
 
     public void setSolicitacaoMedica(SolicitacaoMedica solicitacaoMedica) {
         this.solicitacaoMedica = solicitacaoMedica;
-    }
-
-    public String getCpfPrec() {
-        return cpfPrec;
-    }
-
-    public void setCpfPrec(String cpfPrec) {
-        this.cpfPrec = cpfPrec;
     }
 
     public Integer getIdade() {

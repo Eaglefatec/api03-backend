@@ -1,0 +1,1 @@
+ALTER TABLE triagem_pre_guia DROP COLUMN cpf_prec;
