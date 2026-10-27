@@ -74,43 +74,40 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(Customizer.withDefaults())
-            .csrf(AbstractHttpConfigurer::disable)
-            .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-            .authorizeHttpRequests((authorize) -> authorize
-                .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                .requestMatchers("/solicitacoes/publico/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/procedimentos/**", "/ocs/**", "/medicos/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/solicitacoes").hasAnyRole("MEDICO", "ADMIN")
-                .requestMatchers("/pacientes", "/pacientes/**").hasAnyRole("MEDICO", "ADMIN")
-                .requestMatchers("/auth/**").authenticated()
-                .requestMatchers("/solicitacoes/*/pre-guia").hasAnyRole("EG", "MEDICO", "ADMIN")
-                .requestMatchers("/solicitacoes/*/guia-pdf", "/solicitacoes/*/guia-pdf/**").hasAnyRole("EG", "ADMIN")
-                .requestMatchers("/guias/*/validade").hasAnyRole("OCS", "ADMIN")
-                .requestMatchers(HttpMethod.POST, "/guias").hasAnyRole("OCS", "ADMIN")
-                .requestMatchers(HttpMethod.GET, "/guias").hasAnyRole("OCS", "ADMIN")
-                .requestMatchers("/lotes/**").hasAnyRole("OCS", "ADMIN")
-                .requestMatchers("/fechamentos/**").hasAnyRole("OCS", "ADMIN")
-                .requestMatchers("/encaminhamentos/**").hasAnyRole("MEDICO", "ADMIN")
-                .requestMatchers("/importacao/**").hasRole("ADMIN")
-                .requestMatchers(
-                    "/",
-                    "/*.html",
-                    "/css/**",
-                    "/js/**",
-                    "/images/**",
-                    "/favicon.ico",
-                    "/static/**",
-                    "/error"
-                ).permitAll()
-                .anyRequest().authenticated()
-            )
-            .httpBasic(basic -> basic.authenticationEntryPoint((request, response, authException) -> {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("{\"error\": \"Não autorizado: credenciais ausentes ou inválidas.\"}");
-            }));
+                .cors(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+                .authorizeHttpRequests((authorize) -> authorize
+                        .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/solicitacoes/publico/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/procedimentos/**", "/ocs/**", "/medicos/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/solicitacoes").hasAnyRole("MEDICO", "ADMIN")
+                        .requestMatchers("/pacientes", "/pacientes/**").hasAnyRole("MEDICO", "ADMIN")
+                        .requestMatchers("/auth/**").authenticated()
+                        .requestMatchers("/solicitacoes/*/pre-guia").hasAnyRole("EG", "MEDICO", "ADMIN")
+                        .requestMatchers("/solicitacoes/*/guia-pdf", "/solicitacoes/*/guia-pdf/**").hasAnyRole("EG", "ADMIN")
+                        .requestMatchers("/guias/*/validade").hasAnyRole("OCS", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/guias").hasAnyRole("OCS", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/guias").hasAnyRole("OCS", "ADMIN")
+                        .requestMatchers("/lotes/**").hasAnyRole("OCS", "ADMIN")
+                        .requestMatchers("/fechamentos/**").hasAnyRole("OCS", "ADMIN")
+                        .requestMatchers("/encaminhamentos/**").hasAnyRole("MEDICO", "ADMIN")
+                        .requestMatchers("/importacao/**").hasRole("ADMIN")
+                        .requestMatchers(
+                                "/",
+                                "/*.html",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/favicon.ico",
+                                "/static/**",
+                                "/error"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                )
+
+                .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
