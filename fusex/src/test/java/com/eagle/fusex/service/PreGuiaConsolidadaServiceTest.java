@@ -76,8 +76,8 @@ class PreGuiaConsolidadaServiceTest {
 
         triagem = new TriagemPreGuia();
         triagem.setId(1L);
-        triagem.setIdade(30);
-        triagem.setTelefone("11999999999");
+        paciente.setIdade(30);
+        paciente.setTelefone("11999999999");
         triagem.setOcs(ocs);
     }
 

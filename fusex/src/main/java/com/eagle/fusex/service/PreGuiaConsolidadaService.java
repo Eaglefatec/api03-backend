@@ -55,11 +55,13 @@ public class PreGuiaConsolidadaService {
                 .orElseThrow(() -> new TriagemNaoPreenchidaException(
                         "Triagem ainda não foi preenchida pelo beneficiário; não é possível consultar a pré-guia"));
 
+        var paciente = solicitacao.getPaciente();
+
         PreGuiaConsolidadaResponse.Beneficiario beneficiario = new PreGuiaConsolidadaResponse.Beneficiario(
-                solicitacao.getPaciente().getNome(),
-                triagem.getIdade(),
-                solicitacao.getPaciente().getCpfPrec(),
-                triagem.getTelefone()
+                paciente.getNome(),
+                    paciente.getIdade(),
+                paciente.getCpfPrec(),
+                paciente.getTelefone()
         );
 
         OcsResponse ocsResponse = OcsResponse.from(triagem.getOcs());
