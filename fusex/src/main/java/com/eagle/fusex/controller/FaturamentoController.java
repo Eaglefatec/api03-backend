@@ -4,7 +4,9 @@ import com.eagle.fusex.model.dto.request.ConfirmarFaturamentoRequest;
 import com.eagle.fusex.model.dto.response.ArquivoLoteDownload;
 import com.eagle.fusex.model.dto.response.FaturamentoFechamentoResponse;
 import com.eagle.fusex.model.dto.response.FaturamentoLoteResponse;
+import com.eagle.fusex.model.dto.response.TabelaArquivoResponse;
 import com.eagle.fusex.service.FaturamentoService;
+import com.eagle.fusex.service.LeitorTabelaArquivo;
 import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -25,9 +27,11 @@ import java.util.List;
 public class FaturamentoController {
 
     private final FaturamentoService faturamentoService;
+    private final LeitorTabelaArquivo leitorTabela;
 
-    public FaturamentoController(FaturamentoService faturamentoService) {
+    public FaturamentoController(FaturamentoService faturamentoService, LeitorTabelaArquivo leitorTabela) {
         this.faturamentoService = faturamentoService;
+        this.leitorTabela = leitorTabela;
     }
 
     @GetMapping("/fechamentos")
@@ -54,6 +58,16 @@ public class FaturamentoController {
     @GetMapping("/lotes/{loteId}/espelho")
     public ResponseEntity<byte[]> visualizarEspelho(@PathVariable Long loteId) {
         return responderArquivo(faturamentoService.obterEspelho(loteId));
+    }
+
+    @GetMapping("/lotes/{loteId}/fatura/tabela")
+    public ResponseEntity<TabelaArquivoResponse> tabelaFatura(@PathVariable Long loteId) {
+        return ResponseEntity.ok(leitorTabela.ler(faturamentoService.obterFatura(loteId)));
+    }
+
+    @GetMapping("/lotes/{loteId}/espelho/tabela")
+    public ResponseEntity<TabelaArquivoResponse> tabelaEspelho(@PathVariable Long loteId) {
+        return ResponseEntity.ok(leitorTabela.ler(faturamentoService.obterEspelho(loteId)));
     }
 
     private ResponseEntity<byte[]> responderArquivo(ArquivoLoteDownload arquivo) {
