@@ -2,12 +2,15 @@ package com.eagle.fusex.service;
 
 import com.eagle.fusex.exception.BusinessException;
 import com.eagle.fusex.exception.ResourceNotFoundException;
+import com.eagle.fusex.exception.ValidationException;
+import com.eagle.fusex.model.dto.request.ConfirmarFaturamentoRequest;
 import com.eagle.fusex.model.dto.response.ArquivoLoteDownload;
 import com.eagle.fusex.model.dto.response.FaturamentoFechamentoResponse;
 import com.eagle.fusex.model.dto.response.FaturamentoLoteResponse;
 import com.eagle.fusex.model.entity.Fechamento;
 import com.eagle.fusex.model.entity.Lote;
 import com.eagle.fusex.model.enums.StatusFechamento;
+import com.eagle.fusex.model.enums.StatusLote;
 import com.eagle.fusex.repository.FechamentoRepository;
 import com.eagle.fusex.repository.GuiaRepository;
 import com.eagle.fusex.repository.LoteRepository;
@@ -17,7 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class FaturamentoService {
@@ -58,6 +65,51 @@ public class FaturamentoService {
     public ArquivoLoteDownload obterEspelho(Long loteId) {
         Lote lote = buscarLote(loteId);
         return lerArquivo(lote.getEspelhoCaminhoArquivo(), lote.getEspelhoNomeArquivo(), lote.getEspelhoTipoArquivo());
+    }
+
+    @Transactional
+    public FaturamentoFechamentoResponse confirmar(Long fechamentoId, ConfirmarFaturamentoRequest request) {
+        Fechamento fechamento = buscarFechamento(fechamentoId);
+        if (fechamento.getStatus() != StatusFechamento.AGUARDANDO_FATURAMENTO) {
+            throw new ValidationException("Este fechamento não está aguardando faturamento");
+        }
+
+        List<Lote> lotes = loteRepository.findByFechamentoId(fechamentoId);
+        Map<Long, String> numerosPorLote = new HashMap<>();
+        Set<String> numerosInformados = new HashSet<>();
+        for (ConfirmarFaturamentoRequest.LoteSisfat item : request.lotes()) {
+            String numero = item.numeroSisfat().trim();
+            if (numerosPorLote.put(item.loteId(), numero) != null) {
+                throw new ValidationException("O lote " + item.loteId() + " foi informado mais de uma vez");
+            }
+            if (!numerosInformados.add(numero)) {
+                throw new ValidationException("Cada lote precisa de um Nº SisFat diferente");
+            }
+        }
+
+        Set<Long> idsDoFechamento = new HashSet<>();
+        lotes.forEach(lote -> idsDoFechamento.add(lote.getId()));
+        if (!idsDoFechamento.containsAll(numerosPorLote.keySet())) {
+            throw new ValidationException("Há lote informado que não pertence a este fechamento");
+        }
+        if (!numerosPorLote.keySet().containsAll(idsDoFechamento)) {
+            throw new ValidationException("Informe o Nº SisFat de todos os lotes do fechamento");
+        }
+        for (String numero : numerosInformados) {
+            if (loteRepository.existsByNumeroSisfat(numero)) {
+                throw new ValidationException("O Nº SisFat " + numero + " já foi utilizado em outro lote");
+            }
+        }
+
+        for (Lote lote : lotes) {
+            lote.setNumeroSisfat(numerosPorLote.get(lote.getId()));
+            lote.setStatus(StatusLote.AGUARDANDO_LISURA);
+        }
+        loteRepository.saveAll(lotes);
+        fechamento.setStatus(StatusFechamento.AGUARDANDO_LISURA);
+        fechamentoRepository.save(fechamento);
+
+        return toFechamentoResponse(fechamento);
     }
 
     private Lote buscarLote(Long loteId) {

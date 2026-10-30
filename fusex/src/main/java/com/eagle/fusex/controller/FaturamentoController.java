@@ -1,15 +1,19 @@
 package com.eagle.fusex.controller;
 
+import com.eagle.fusex.model.dto.request.ConfirmarFaturamentoRequest;
 import com.eagle.fusex.model.dto.response.ArquivoLoteDownload;
 import com.eagle.fusex.model.dto.response.FaturamentoFechamentoResponse;
 import com.eagle.fusex.model.dto.response.FaturamentoLoteResponse;
 import com.eagle.fusex.service.FaturamentoService;
+import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,6 +38,12 @@ public class FaturamentoController {
     @GetMapping("/fechamentos/{fechamentoId}/lotes")
     public ResponseEntity<List<FaturamentoLoteResponse>> listarLotes(@PathVariable Long fechamentoId) {
         return ResponseEntity.ok(faturamentoService.listarLotes(fechamentoId));
+    }
+
+    @PostMapping("/fechamentos/{fechamentoId}/confirmar")
+    public ResponseEntity<FaturamentoFechamentoResponse> confirmar(@PathVariable Long fechamentoId,
+                                                                   @Valid @RequestBody ConfirmarFaturamentoRequest request) {
+        return ResponseEntity.ok(faturamentoService.confirmar(fechamentoId, request));
     }
 
     @GetMapping("/lotes/{loteId}/fatura")
