@@ -1,5 +1,6 @@
 package com.eagle.fusex.model.entity;
 
+import com.eagle.fusex.model.enums.StatusLote;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -50,6 +51,13 @@ public class Lote {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fechamento_id")
     private Fechamento fechamento;
+
+    @Column(name = "numero_sisfat", unique = true)
+    private String numeroSisfat;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private StatusLote status = StatusLote.AGUARDANDO_FATURAMENTO;
 
     public Lote() {
     }
@@ -148,6 +156,22 @@ public class Lote {
 
     public void setEspelhoTipoArquivo(String espelhoTipoArquivo) {
         this.espelhoTipoArquivo = espelhoTipoArquivo;
+    }
+
+    public String getNumeroSisfat() {
+        return numeroSisfat;
+    }
+
+    public void setNumeroSisfat(String numeroSisfat) {
+        this.numeroSisfat = numeroSisfat;
+    }
+
+    public StatusLote getStatus() {
+        return status;
+    }
+
+    public void setStatus(StatusLote status) {
+        this.status = status;
     }
 
     public Fechamento getFechamento() {
