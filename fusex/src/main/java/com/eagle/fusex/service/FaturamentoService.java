@@ -1,6 +1,8 @@
 package com.eagle.fusex.service;
 
+import com.eagle.fusex.exception.BusinessException;
 import com.eagle.fusex.exception.ResourceNotFoundException;
+import com.eagle.fusex.model.dto.response.ArquivoLoteDownload;
 import com.eagle.fusex.model.dto.response.FaturamentoFechamentoResponse;
 import com.eagle.fusex.model.dto.response.FaturamentoLoteResponse;
 import com.eagle.fusex.model.entity.Fechamento;
@@ -12,6 +14,9 @@ import com.eagle.fusex.repository.LoteRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 @Service
@@ -41,6 +46,35 @@ public class FaturamentoService {
         return loteRepository.findByFechamentoId(fechamentoId).stream()
                 .map(this::toLoteResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ArquivoLoteDownload obterFatura(Long loteId) {
+        Lote lote = buscarLote(loteId);
+        return lerArquivo(lote.getFaturaCaminhoArquivo(), lote.getFaturaNomeArquivo(), lote.getFaturaTipoArquivo());
+    }
+
+    @Transactional(readOnly = true)
+    public ArquivoLoteDownload obterEspelho(Long loteId) {
+        Lote lote = buscarLote(loteId);
+        return lerArquivo(lote.getEspelhoCaminhoArquivo(), lote.getEspelhoNomeArquivo(), lote.getEspelhoTipoArquivo());
+    }
+
+    private Lote buscarLote(Long loteId) {
+        return loteRepository.findById(loteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Lote", loteId));
+    }
+
+    private ArquivoLoteDownload lerArquivo(String caminho, String nome, String tipo) {
+        Path arquivo = Path.of(caminho);
+        if (!Files.exists(arquivo)) {
+            throw new ResourceNotFoundException("Arquivo do lote não encontrado no armazenamento");
+        }
+        try {
+            return new ArquivoLoteDownload(Files.readAllBytes(arquivo), nome, tipo);
+        } catch (IOException e) {
+            throw new BusinessException("Não foi possível ler o arquivo do lote", e);
+        }
     }
 
     private Fechamento buscarFechamento(Long fechamentoId) {
