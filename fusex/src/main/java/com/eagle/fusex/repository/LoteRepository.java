@@ -11,4 +11,5 @@ public interface LoteRepository extends JpaRepository<Lote, Long> {
     List<Lote> findByOcs_OcsIdAndCompetenciaAnoAndCompetenciaMesAndFechamentoIsNull(
             Long ocsId, Integer competenciaAno, Integer competenciaMes);
     List<Lote> findByFechamentoId(Long fechamentoId);
+    boolean existsByNumeroSisfat(String numeroSisfat);
 }

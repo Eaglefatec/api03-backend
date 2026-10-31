@@ -55,7 +55,13 @@ public class SecurityConfig {
                 .roles("OCS")
                 .build();
 
-        return new InMemoryUserDetailsManager(medico, emissorGuia, admin, ocs);
+        UserDetails faturamento = User.builder()
+                .username("faturamento")
+                .password(passwordEncoder().encode("senha123"))
+                .roles("FATURAMENTO")
+                .build();
+
+        return new InMemoryUserDetailsManager(medico, emissorGuia, admin, ocs, faturamento);
     }
 
     @Bean
@@ -92,6 +98,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/guias").hasAnyRole("OCS", "ADMIN")
                         .requestMatchers("/lotes/**").hasAnyRole("OCS", "ADMIN")
                         .requestMatchers("/fechamentos/**").hasAnyRole("OCS", "ADMIN")
+                        .requestMatchers("/faturamento/**").hasAnyRole("FATURAMENTO", "ADMIN")
                         .requestMatchers("/encaminhamentos/**").hasAnyRole("MEDICO", "ADMIN")
                         .requestMatchers("/importacao/**").hasRole("ADMIN")
                         .requestMatchers(

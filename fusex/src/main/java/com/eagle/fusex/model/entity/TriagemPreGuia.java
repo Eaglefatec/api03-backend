@@ -16,12 +16,6 @@ public class TriagemPreGuia {
     @JoinColumn(name = "solicitacao_id", nullable = false, unique = true)
     private SolicitacaoMedica solicitacaoMedica;
 
-    @Column(nullable = false)
-    private Integer idade;
-
-    @Column(nullable = false, length = 20)
-    private String telefone;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ocs_id", nullable = false)
     private Ocs ocs;
@@ -54,22 +48,6 @@ public class TriagemPreGuia {
 
     public void setSolicitacaoMedica(SolicitacaoMedica solicitacaoMedica) {
         this.solicitacaoMedica = solicitacaoMedica;
-    }
-
-    public Integer getIdade() {
-        return idade;
-    }
-
-    public void setIdade(Integer idade) {
-        this.idade = idade;
-    }
-
-    public String getTelefone() {
-        return telefone;
-    }
-
-    public void setTelefone(String telefone) {
-        this.telefone = telefone;
     }
 
     public Ocs getOcs() {
