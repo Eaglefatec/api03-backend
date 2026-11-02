@@ -30,6 +30,12 @@ public class SolicitacaoProcedimento {
     public SolicitacaoProcedimento() {
     }
 
+    public SolicitacaoProcedimento(SolicitacaoMedica solicitacaoMedica, Procedimento procedimento, Integer quantidade) {
+        this.solicitacaoMedica = solicitacaoMedica;
+        this.procedimento = procedimento;
+        this.quantidade = quantidade;
+    }
+
     public Long getId() {
         return id;
     }

@@ -8,7 +8,9 @@ import com.eagle.fusex.model.dto.response.SolicitacaoPublicaResponse;
 import com.eagle.fusex.model.dto.response.TriagemResponse;
 import com.eagle.fusex.model.entity.Ocs;
 import com.eagle.fusex.model.entity.Paciente;
+import com.eagle.fusex.model.entity.Procedimento;
 import com.eagle.fusex.model.entity.SolicitacaoMedica;
+import com.eagle.fusex.model.entity.SolicitacaoProcedimento;
 import com.eagle.fusex.model.entity.TriagemPreGuia;
 import com.eagle.fusex.model.enums.Especialidade;
 import com.eagle.fusex.repository.OcsProcedimentoRepository;
@@ -25,12 +27,15 @@ import org.mockito.MockitoAnnotations;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class TriagemPreGuiaServiceTest {
@@ -64,7 +69,7 @@ class TriagemPreGuiaServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        paciente = new Paciente("João Silva", "12345678901", "OM001");
+        paciente = new Paciente("João Silva", "12345678901", "12345", "OM001", "joao@email.com");
         paciente.setId(1L);
 
         solicitacao = new SolicitacaoMedica();
@@ -119,6 +124,9 @@ class TriagemPreGuiaServiceTest {
         assertNotNull(response);
         assertEquals("João Silva", response.getNomePaciente());
         assertEquals("OM001", response.getOm());
+        assertEquals("12345678901", response.getCpf());
+        assertEquals("12345", response.getPrec());
+        assertEquals("joao@email.com", response.getEmail());
         assertFalse(response.getTriagemPreenchida());
     }
 
@@ -144,7 +152,8 @@ class TriagemPreGuiaServiceTest {
                 .thenReturn(Optional.empty());
 
         PreencherTriagemRequest request = new PreencherTriagemRequest();
-        request.setCpfPrec("12345678901");
+        request.setCpf("12345678901");
+        request.setPrec("12345");
         request.setIdade(30);
         request.setTelefone("11999999999");
         request.setOcsId(1L);
@@ -165,7 +174,8 @@ class TriagemPreGuiaServiceTest {
                 .thenReturn(Optional.of(triagemExistente));
 
         PreencherTriagemRequest request = new PreencherTriagemRequest();
-        request.setCpfPrec("12345678901");
+        request.setCpf("12345678901");
+        request.setPrec("12345");
         request.setIdade(30);
         request.setTelefone("11999999999");
         request.setOcsId(1L);
@@ -185,10 +195,47 @@ class TriagemPreGuiaServiceTest {
                 .thenReturn(Optional.empty());
 
         PreencherTriagemRequest request = new PreencherTriagemRequest();
-        request.setCpfPrec("12345678901");
+        request.setCpf("12345678901");
+        request.setPrec("12345");
         request.setIdade(30);
         request.setTelefone("11999999999");
         request.setOcsId(99L);
+        request.setAceitoTermos(true);
+
+        assertThrows(OcsInvalidoException.class,
+                () -> service.preencherTriagem("token-uuid-123", request));
+    }
+
+    @Test
+    void testPreencherTriagem_OcsNaoCobreTodosProcedimentos_LancaException() {
+        when(solicitacaoRepository.findByTokenPublico("token-uuid-123"))
+                .thenReturn(Optional.of(solicitacao));
+        when(triagemRepository.findBySolicitacaoMedicaId(1L))
+                .thenReturn(Optional.empty());
+        when(ocsRepository.findById(1L))
+                .thenReturn(Optional.of(ocs));
+
+        Procedimento proc1 = new Procedimento("DGP001", "Proc 1", 1);
+        Procedimento proc2 = new Procedimento("DGP002", "Proc 2", 1);
+
+        SolicitacaoProcedimento sp1 = new SolicitacaoProcedimento();
+        sp1.setProcedimento(proc1);
+        SolicitacaoProcedimento sp2 = new SolicitacaoProcedimento();
+        sp2.setProcedimento(proc2);
+
+        when(solicitacaoProcedimentoRepository.findBySolicitacaoMedicaId(1L))
+                .thenReturn(List.of(sp1, sp2));
+
+        // OCS só cobre 1 dos 2 procedimentos
+        when(ocsProcedimentoRepository.countByOcs_OcsIdAndProcedimento_ProcCodigoDgpIn(eq(1L), anyCollection()))
+                .thenReturn(1L);
+
+        PreencherTriagemRequest request = new PreencherTriagemRequest();
+        request.setCpf("12345678901");
+        request.setPrec("12345");
+        request.setIdade(30);
+        request.setTelefone("11999999999");
+        request.setOcsId(1L);
         request.setAceitoTermos(true);
 
         assertThrows(OcsInvalidoException.class,
@@ -205,7 +252,8 @@ class TriagemPreGuiaServiceTest {
                 .thenReturn(Optional.of(ocs));
 
         PreencherTriagemRequest request = new PreencherTriagemRequest();
-        request.setCpfPrec("12345678901");
+        request.setCpf("12345678901");
+        request.setPrec("12345");
         request.setIdade(30);
         request.setTelefone("11999999999");
         request.setOcsId(1L);

@@ -88,7 +88,7 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/solicitacoes/publico/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/procedimentos/**", "/ocs/**", "/medicos/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/solicitacoes").hasAnyRole("MEDICO", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/solicitacoes", "/solicitacoes/*/reenviar-email").hasAnyRole("MEDICO", "ADMIN")
                         .requestMatchers("/pacientes", "/pacientes/**").hasAnyRole("MEDICO", "ADMIN")
                         .requestMatchers("/auth/**").authenticated()
                         .requestMatchers("/solicitacoes/*/pre-guia").hasAnyRole("EG", "MEDICO", "ADMIN")

@@ -1,6 +1,7 @@
 package com.eagle.fusex.model.entity;
 
 import com.eagle.fusex.model.enums.Especialidade;
+import com.eagle.fusex.model.enums.StatusEmail;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -57,6 +58,22 @@ public class SolicitacaoMedica {
 
     @Column(name = "caminho_arquivo_guia", length = 500)
     private String caminhoArquivoGuia;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_email", nullable = false)
+    private StatusEmail statusEmail = StatusEmail.SIMULADO;
+
+    @Column(name = "email_destinatario")
+    private String emailDestinatario;
+
+    @Column(name = "email_tentativas", nullable = false)
+    private Integer emailTentativas = 0;
+
+    @Column(name = "email_ultimo_erro", length = 500)
+    private String emailUltimoErro;
+
+    @Column(name = "email_proxima_tentativa")
+    private LocalDateTime emailProximaTentativa;
 
     public SolicitacaoMedica() {
     }
@@ -168,6 +185,46 @@ public class SolicitacaoMedica {
 
     public void setCaminhoArquivoGuia(String caminhoArquivoGuia) {
         this.caminhoArquivoGuia = caminhoArquivoGuia;
+    }
+
+    public StatusEmail getStatusEmail() {
+        return statusEmail;
+    }
+
+    public void setStatusEmail(StatusEmail statusEmail) {
+        this.statusEmail = statusEmail;
+    }
+
+    public String getEmailDestinatario() {
+        return emailDestinatario;
+    }
+
+    public void setEmailDestinatario(String emailDestinatario) {
+        this.emailDestinatario = emailDestinatario;
+    }
+
+    public Integer getEmailTentativas() {
+        return emailTentativas;
+    }
+
+    public void setEmailTentativas(Integer emailTentativas) {
+        this.emailTentativas = emailTentativas;
+    }
+
+    public String getEmailUltimoErro() {
+        return emailUltimoErro;
+    }
+
+    public void setEmailUltimoErro(String emailUltimoErro) {
+        this.emailUltimoErro = emailUltimoErro;
+    }
+
+    public LocalDateTime getEmailProximaTentativa() {
+        return emailProximaTentativa;
+    }
+
+    public void setEmailProximaTentativa(LocalDateTime emailProximaTentativa) {
+        this.emailProximaTentativa = emailProximaTentativa;
     }
 
     @Override

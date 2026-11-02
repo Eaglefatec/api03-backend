@@ -12,4 +12,5 @@ public interface OcsProcedimentoRepository extends JpaRepository<OcsProcedimento
     List<OcsProcedimento> findByProcedimento_ProcCodigoDgp(String procCodigoDgp);
     Optional<OcsProcedimento> findByOcs_OcsIdAndProcedimento_ProcCodigoDgp(Long ocsId, String procCodigoDgp);
     List<OcsProcedimento> findByOcs_OcsIdAndProcedimento_ProcCodigoDgpIn(Long ocsId, Collection<String> procCodigosDgp);
+    long countByOcs_OcsIdAndProcedimento_ProcCodigoDgpIn(Long ocsId, Collection<String> procCodigosDgp);
 }

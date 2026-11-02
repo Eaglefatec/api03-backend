@@ -1,6 +1,7 @@
 package com.eagle.fusex.controller;
 
 import com.eagle.fusex.model.dto.response.ProcedimentoResponse;
+import com.eagle.fusex.model.enums.Especialidade;
 import com.eagle.fusex.service.ProcedimentoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/procedimentos")
@@ -22,7 +24,8 @@ public class ProcedimentoController {
 
     @GetMapping
     public ResponseEntity<List<ProcedimentoResponse>> listarProcedimentos(
-            @RequestParam(required = false) String busca) {
-        return ResponseEntity.ok(procedimentoService.listarProcedimentos(busca));
+            @RequestParam(required = false) String busca,
+            @RequestParam(required = false) Set<Especialidade> especialidades) {
+        return ResponseEntity.ok(procedimentoService.listarProcedimentos(busca, especialidades));
     }
 }
