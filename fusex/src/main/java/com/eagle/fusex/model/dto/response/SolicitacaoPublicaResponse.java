@@ -10,9 +10,7 @@ public class SolicitacaoPublicaResponse {
 
     private String nomePaciente;
     private String om;
-    private String cpf;
-    private String prec;
-    private String email;
+    private String cpfPrec;
     private Integer idade;
     private String telefone;
     private Set<Especialidade> especialidades;
@@ -54,24 +52,21 @@ public class SolicitacaoPublicaResponse {
 
     public SolicitacaoPublicaResponse(String nomePaciente, String om, Set<Especialidade> especialidades,
                                       String observacao, Boolean triagemPreenchida) {
-        this(nomePaciente, om, null, null, null, null, null, especialidades, observacao, triagemPreenchida, new ArrayList<>());
+        this(nomePaciente, om, null, null, null, especialidades, observacao, triagemPreenchida, new ArrayList<>());
     }
 
     public SolicitacaoPublicaResponse(String nomePaciente, String om, Set<Especialidade> especialidades,
                                       String observacao, Boolean triagemPreenchida,
                                       List<ProcedimentoResumo> procedimentos) {
-        this(nomePaciente, om, null, null, null, null, null, especialidades, observacao, triagemPreenchida, procedimentos);
+        this(nomePaciente, om, null, null, null, especialidades, observacao, triagemPreenchida, procedimentos);
     }
 
-    public SolicitacaoPublicaResponse(String nomePaciente, String om, String cpf, String prec, String email,
-                                      Integer idade, String telefone,
+    public SolicitacaoPublicaResponse(String nomePaciente, String om, String cpfPrec, Integer idade, String telefone,
                                       Set<Especialidade> especialidades, String observacao, Boolean triagemPreenchida,
                                       List<ProcedimentoResumo> procedimentos) {
         this.nomePaciente = nomePaciente;
         this.om = om;
-        this.cpf = cpf;
-        this.prec = prec;
-        this.email = email;
+        this.cpfPrec = cpfPrec;
         this.idade = idade;
         this.telefone = telefone;
         this.especialidades = especialidades;
@@ -96,34 +91,12 @@ public class SolicitacaoPublicaResponse {
         this.om = om;
     }
 
-    public String getCpf() {
-        return cpf;
-    }
-
-    public void setCpf(String cpf) {
-        this.cpf = cpf;
-    }
-
-    public String getPrec() {
-        return prec;
-    }
-
-    public void setPrec(String prec) {
-        this.prec = prec;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
     public String getCpfPrec() {
-        if (cpf == null && prec == null) return null;
-        if (cpf != null && prec != null) return cpf + " / " + prec;
-        return cpf != null ? cpf : prec;
+        return cpfPrec;
+    }
+
+    public void setCpfPrec(String cpfPrec) {
+        this.cpfPrec = cpfPrec;
     }
 
     public Integer getIdade() {

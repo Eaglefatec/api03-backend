@@ -1,21 +1,21 @@
 package com.eagle.fusex.model.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 public class PreencherTriagemRequest {
 
-    @Size(max = 14, message = "cpf deve ter no máximo 14 caracteres")
-    private String cpf;
-
-    @Size(max = 30, message = "prec deve ter no máximo 30 caracteres")
-    private String prec;
+    @NotBlank(message = "cpfPrec é obrigatório")
+    @Size(max = 20, message = "cpfPrec deve ter no máximo 20 caracteres")
+    private String cpfPrec;
 
     @NotNull(message = "idade é obrigatória")
     @Positive(message = "idade deve ser um número positivo")
     private Integer idade;
 
+    @NotBlank(message = "telefone é obrigatório")
     @Size(max = 20, message = "telefone deve ter no máximo 20 caracteres")
     private String telefone;
 
@@ -29,46 +29,20 @@ public class PreencherTriagemRequest {
     public PreencherTriagemRequest() {
     }
 
-    public PreencherTriagemRequest(String cpf, String prec, Integer idade, String telefone, Long ocsId, Boolean aceitoTermos) {
-        this.cpf = cpf;
-        this.prec = prec;
+    public PreencherTriagemRequest(String cpfPrec, Integer idade, String telefone, Long ocsId, Boolean aceitoTermos) {
+        this.cpfPrec = cpfPrec;
         this.idade = idade;
         this.telefone = telefone;
         this.ocsId = ocsId;
         this.aceitoTermos = aceitoTermos;
     }
 
-    public PreencherTriagemRequest(String cpfPrec, Integer idade, String telefone, Long ocsId, Boolean aceitoTermos) {
-        this(cpfPrec, null, idade, telefone, ocsId, aceitoTermos);
-    }
-
-    public String getCpf() {
-        return cpf;
-    }
-
-    public void setCpf(String cpf) {
-        this.cpf = cpf;
-    }
-
-    public String getPrec() {
-        return prec;
-    }
-
-    public void setPrec(String prec) {
-        this.prec = prec;
-    }
-
     public String getCpfPrec() {
-        if (cpf == null && prec == null) return null;
-        if (cpf != null && prec != null) return cpf + " / " + prec;
-        return cpf != null ? cpf : prec;
+        return cpfPrec;
     }
 
     public void setCpfPrec(String cpfPrec) {
-        if (cpfPrec != null) {
-            if (this.cpf == null) this.cpf = cpfPrec;
-            if (this.prec == null) this.prec = cpfPrec;
-        }
+        this.cpfPrec = cpfPrec;
     }
 
     public Integer getIdade() {

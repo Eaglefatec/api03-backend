@@ -3,7 +3,6 @@ package com.eagle.fusex.service;
 import com.eagle.fusex.exception.ResourceNotFoundException;
 import com.eagle.fusex.model.dto.response.ProcedimentoResponse;
 import com.eagle.fusex.model.entity.Procedimento;
-import com.eagle.fusex.model.enums.Especialidade;
 import com.eagle.fusex.repository.ProcedimentoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class ProcedimentoService {
@@ -24,26 +22,13 @@ public class ProcedimentoService {
 
     @Transactional(readOnly = true)
     public List<ProcedimentoResponse> listarProcedimentos(String busca) {
-        return listarProcedimentos(busca, null);
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProcedimentoResponse> listarProcedimentos(String busca, Set<Especialidade> especialidades) {
-        boolean temBusca = busca != null && !busca.isBlank();
-        boolean temEspecialidades = especialidades != null && !especialidades.isEmpty();
-
-        List<Procedimento> procedimentos;
-        if (temBusca && temEspecialidades) {
-            procedimentos = procedimentoRepository.findTop20ByDescricaoAndEspecialidades(busca.trim(), especialidades);
-        } else if (temBusca) {
-            procedimentos = procedimentoRepository.findTop50ByDescricaoOuCodigo(busca.trim());
-        } else if (temEspecialidades) {
-            procedimentos = procedimentoRepository.findDistinctByEspecialidades(especialidades);
-        } else {
+        if (busca == null || busca.isBlank()) {
             return Collections.emptyList();
         }
 
-        return procedimentos.stream()
+        return procedimentoRepository
+                .findTop20ByProcDescricaoContainingIgnoreCaseOrderByProcDescricao(busca.trim())
+                .stream()
                 .map(this::toResponse)
                 .toList();
     }

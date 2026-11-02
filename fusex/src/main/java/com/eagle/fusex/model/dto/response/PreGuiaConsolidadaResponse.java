@@ -79,25 +79,17 @@ public class PreGuiaConsolidadaResponse {
     public static class Beneficiario {
         private String nome;
         private Integer idade;
-        private String cpf;
-        private String prec;
-        private String email;
+        private String cpfPrec;
         private String telefone;
 
         public Beneficiario() {
         }
 
-        public Beneficiario(String nome, Integer idade, String cpf, String prec, String email, String telefone) {
+        public Beneficiario(String nome, Integer idade, String cpfPrec, String telefone) {
             this.nome = nome;
             this.idade = idade;
-            this.cpf = cpf;
-            this.prec = prec;
-            this.email = email;
+            this.cpfPrec = cpfPrec;
             this.telefone = telefone;
-        }
-
-        public Beneficiario(String nome, Integer idade, String cpfPrec, String telefone) {
-            this(nome, idade, cpfPrec, null, null, telefone);
         }
 
         public String getNome() {
@@ -116,41 +108,12 @@ public class PreGuiaConsolidadaResponse {
             this.idade = idade;
         }
 
-        public String getCpf() {
-            return cpf;
-        }
-
-        public void setCpf(String cpf) {
-            this.cpf = cpf;
-        }
-
-        public String getPrec() {
-            return prec;
-        }
-
-        public void setPrec(String prec) {
-            this.prec = prec;
-        }
-
-        public String getEmail() {
-            return email;
-        }
-
-        public void setEmail(String email) {
-            this.email = email;
-        }
-
         public String getCpfPrec() {
-            if (cpf == null && prec == null) return null;
-            if (cpf != null && prec != null) return cpf + " / " + prec;
-            return cpf != null ? cpf : prec;
+            return cpfPrec;
         }
 
         public void setCpfPrec(String cpfPrec) {
-            if (cpfPrec != null) {
-                if (this.cpf == null) this.cpf = cpfPrec;
-                if (this.prec == null) this.prec = cpfPrec;
-            }
+            this.cpfPrec = cpfPrec;
         }
 
         public String getTelefone() {

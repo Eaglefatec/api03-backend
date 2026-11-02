@@ -15,17 +15,11 @@ public class Paciente {
     @Column(nullable = false)
     private String nome;
 
-    @Column(nullable = false, length = 14)
-    private String cpf;
-
-    @Column(nullable = false, length = 30)
-    private String prec;
+    @Column(nullable = false, unique = true, length = 20)
+    private String cpfPrec;
 
     @Column(nullable = false, length = 10)
     private String om;
-
-    @Column(nullable = false, length = 255)
-    private String email;
 
     @Column(nullable = true)
     private Integer idade;
@@ -39,38 +33,21 @@ public class Paciente {
     public Paciente() {
     }
 
-    public Paciente(String nome, String cpf, String prec, String om, String email) {
-        this(nome, cpf, prec, om, email, null, null);
-    }
-
-    public Paciente(String nome, String cpf, String prec, String om, String email, Integer idade, String telefone) {
-        this.nome = nome;
-        this.cpf = normalizarCpf(cpf);
-        this.prec = prec != null ? prec.trim() : null;
-        this.om = om;
-        this.email = email != null ? email.trim().toLowerCase() : null;
-        this.idade = idade;
-        this.telefone = telefone;
-    }
-
-    // Construtores de compatibilidade com versões e testes legados
     public Paciente(String nome, String cpfPrec, String om) {
-        this(nome, cpfPrec, cpfPrec, om, "paciente@fusex.eb.mil.br");
+        this(nome, cpfPrec, om, null, null);
     }
 
     public Paciente(String nome, String cpfPrec, String om, Integer idade, String telefone) {
-        this(nome, cpfPrec, cpfPrec, om, "paciente@fusex.eb.mil.br", idade, telefone);
+        this.nome = nome;
+        this.cpfPrec = cpfPrec;
+        this.om = om;
+        this.idade = idade;
+        this.telefone = telefone;
     }
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-    }
-
-    public static String normalizarCpf(String valor) {
-        if (valor == null) return null;
-        String limpo = valor.replaceAll("\\D", "");
-        return limpo.isBlank() ? valor.trim() : limpo;
     }
 
     public Long getId() {
@@ -89,20 +66,12 @@ public class Paciente {
         this.nome = nome;
     }
 
-    public String getCpf() {
-        return cpf;
+    public String getCpfPrec() {
+        return cpfPrec;
     }
 
-    public void setCpf(String cpf) {
-        this.cpf = normalizarCpf(cpf);
-    }
-
-    public String getPrec() {
-        return prec;
-    }
-
-    public void setPrec(String prec) {
-        this.prec = prec != null ? prec.trim() : null;
+    public void setCpfPrec(String cpfPrec) {
+        this.cpfPrec = cpfPrec;
     }
 
     public String getOm() {
@@ -111,14 +80,6 @@ public class Paciente {
 
     public void setOm(String om) {
         this.om = om;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email != null ? email.trim().toLowerCase() : null;
     }
 
     public Integer getIdade() {
@@ -143,15 +104,6 @@ public class Paciente {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    /**
-     * Helper de compatibilidade para exibição combinada
-     */
-    public String getCpfPrec() {
-        if (cpf == null && prec == null) return null;
-        if (cpf != null && prec != null) return cpf + " / " + prec;
-        return cpf != null ? cpf : prec;
     }
 
     @Override

@@ -29,30 +29,8 @@ spring:
 
   flyway:
     enabled: true
-    validate-on-migrate: false
-
-  # Configuração SMTP padrão do Spring Boot
-  mail:
-    host: ${SPRING_MAIL_HOST:localhost}
-    port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
-          starttls:
-            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
-            required: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED:false}
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
 
 fusex:
-  public-base-url: ${FUSEX_PUBLIC_BASE_URL:http://localhost:8080/api}
-  mail:
-    enabled: ${FUSEX_MAIL_ENABLED:false}
-    from: ${FUSEX_MAIL_FROM:noreply@fusex.eb.mil.br}
   guia:
     validade-dias: 60
     numero-regex: "(?i)guia\\s+de\\s+encaminhamento\\s+n[ºr°.]*\\s*:?\\s*([A-Z0-9./-]{4,})"

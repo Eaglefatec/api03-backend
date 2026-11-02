@@ -46,9 +46,6 @@ class SolicitacaoMedicaServiceTest {
     @Mock
     private SolicitacaoProcedimentoRepository solicitacaoProcedimentoRepository;
 
-    @Mock
-    private SolicitacaoEmailService emailService;
-
     @InjectMocks
     private SolicitacaoMedicaService service;
 
@@ -71,7 +68,7 @@ class SolicitacaoMedicaServiceTest {
         medicoNaoCredenciado = new Medico("Dra. Maria Santos", "654321", false);
         medicoNaoCredenciado.setId(2L);
 
-        paciente = new Paciente("João Silva", "12345678901", "12345", "OM001", "joao@email.com");
+        paciente = new Paciente("João Silva", "12345678901", "OM001");
         paciente.setId(1L);
 
         procedimento = new Procedimento("DGP001", "Consulta eletiva", 1);
@@ -84,22 +81,6 @@ class SolicitacaoMedicaServiceTest {
         pq.setProcedimentoCodigoDgp("DGP001");
         pq.setQuantidade(1);
         return List.of(pq);
-    }
-
-    private CriarSolicitacaoRequest criarRequestValido() {
-        Set<Especialidade> especialidades = new HashSet<>();
-        especialidades.add(Especialidade.CARDIOLOGISTA);
-
-        CriarSolicitacaoRequest request = new CriarSolicitacaoRequest();
-        request.setMedicoId(1L);
-        request.setNomePaciente("João Silva");
-        request.setCpf("12345678901");
-        request.setPrec("12345");
-        request.setEmail("joao@email.com");
-        request.setOm("OM001");
-        request.setEspecialidades(especialidades);
-        request.setProcedimentos(umProcedimento());
-        return request;
     }
 
     @Test
@@ -115,11 +96,20 @@ class SolicitacaoMedicaServiceTest {
 
     @Test
     void testCriarSolicitacao_PacienteNovo_CriaComSucesso() {
-        CriarSolicitacaoRequest request = criarRequestValido();
+        Set<Especialidade> especialidades = new HashSet<>();
+        especialidades.add(Especialidade.CARDIOLOGISTA);
+
+        CriarSolicitacaoRequest request = new CriarSolicitacaoRequest();
+        request.setMedicoId(1L);
+        request.setNomePaciente("João Silva");
+        request.setCpfPrec("12345678901");
+        request.setOm("OM001");
+        request.setEspecialidades(especialidades);
+        request.setProcedimentos(umProcedimento());
 
         when(medicoRepository.findByIdAndCredenciadoTrue(1L))
                 .thenReturn(Optional.of(medicoCredenciado));
-        when(pacienteRepository.findByCpfOrPrec(any(), any()))
+        when(pacienteRepository.findByCpfPrec("12345678901"))
                 .thenReturn(Optional.empty());
         when(pacienteRepository.save(any(Paciente.class)))
                 .thenReturn(paciente);
@@ -139,18 +129,24 @@ class SolicitacaoMedicaServiceTest {
         assertEquals(1L, response.getId());
         assertEquals("token-uuid", response.getTokenPublico());
         assertTrue(response.getLinkBeneficiario().contains("/solicitacoes/publico/"));
-        assertTrue(response.getQrCodeUrl().contains("/qrcode"));
     }
 
     @Test
     void testCriarSolicitacao_PacienteExistente_PreservaDadosNaoNulos() {
-        CriarSolicitacaoRequest request = criarRequestValido();
+        Set<Especialidade> especialidades = new HashSet<>();
+        especialidades.add(Especialidade.ORTOPEDISTA);
+
+        CriarSolicitacaoRequest request = new CriarSolicitacaoRequest();
+        request.setMedicoId(1L);
         request.setNomePaciente("Tentativa Sobrescrita");
+        request.setCpfPrec("12345678901");
         request.setOm("OM_ALTERADA");
+        request.setEspecialidades(especialidades);
+        request.setProcedimentos(umProcedimento());
 
         when(medicoRepository.findByIdAndCredenciadoTrue(1L))
                 .thenReturn(Optional.of(medicoCredenciado));
-        when(pacienteRepository.findByCpfOrPrec(any(), any()))
+        when(pacienteRepository.findByCpfPrec("12345678901"))
                 .thenReturn(Optional.of(paciente));
         when(pacienteRepository.save(any(Paciente.class)))
                 .thenReturn(paciente);
@@ -167,14 +163,23 @@ class SolicitacaoMedicaServiceTest {
         SolicitacaoResponse response = service.criar(request);
 
         assertNotNull(response);
-        assertEquals("Tentativa Sobrescrita", paciente.getNome());
-        assertEquals("OM_ALTERADA", paciente.getOm());
+        assertEquals("João Silva", paciente.getNome());
+        assertEquals("OM001", paciente.getOm());
         verify(pacienteRepository).save(any(Paciente.class));
     }
 
     @Test
     void testCriarSolicitacao_MultiplasSolicitacoesAnteriores_InvalidaTodasSemExcecao() {
-        CriarSolicitacaoRequest request = criarRequestValido();
+        Set<Especialidade> especialidades = new HashSet<>();
+        especialidades.add(Especialidade.CARDIOLOGISTA);
+
+        CriarSolicitacaoRequest request = new CriarSolicitacaoRequest();
+        request.setMedicoId(1L);
+        request.setNomePaciente("João Silva");
+        request.setCpfPrec("12345678901");
+        request.setOm("OM001");
+        request.setEspecialidades(especialidades);
+        request.setProcedimentos(umProcedimento());
 
         SolicitacaoMedica anterior1 = new SolicitacaoMedica();
         anterior1.setId(98L);
@@ -186,7 +191,7 @@ class SolicitacaoMedicaServiceTest {
 
         when(medicoRepository.findByIdAndCredenciadoTrue(1L))
                 .thenReturn(Optional.of(medicoCredenciado));
-        when(pacienteRepository.findByCpfOrPrec(any(), any()))
+        when(pacienteRepository.findByCpfPrec("12345678901"))
                 .thenReturn(Optional.of(paciente));
         when(pacienteRepository.save(any(Paciente.class)))
                 .thenReturn(paciente);
@@ -205,19 +210,29 @@ class SolicitacaoMedicaServiceTest {
         assertNotNull(response);
         assertFalse(anterior1.getValida());
         assertFalse(anterior2.getValida());
+        // anterior 1 + anterior 2 + nova solicitação = 3 saves
         verify(solicitacaoRepository, times(3)).save(any(SolicitacaoMedica.class));
     }
 
     @Test
     void testCriarSolicitacao_ComMedicoResponsavel_SalvaComSucesso() {
-        CriarSolicitacaoRequest request = criarRequestValido();
+        Set<Especialidade> especialidades = new HashSet<>();
+        especialidades.add(Especialidade.CARDIOLOGISTA);
+
+        CriarSolicitacaoRequest request = new CriarSolicitacaoRequest();
+        request.setMedicoId(1L);
         request.setMedicoResponsavelId(3L);
+        request.setNomePaciente("João Silva");
+        request.setCpfPrec("12345678901");
+        request.setOm("OM001");
+        request.setEspecialidades(especialidades);
+        request.setProcedimentos(umProcedimento());
 
         when(medicoRepository.findByIdAndCredenciadoTrue(1L))
                 .thenReturn(Optional.of(medicoCredenciado));
         when(medicoRepository.findById(3L))
                 .thenReturn(Optional.of(medicoResponsavel));
-        when(pacienteRepository.findByCpfOrPrec(any(), any()))
+        when(pacienteRepository.findByCpfPrec("12345678901"))
                 .thenReturn(Optional.of(paciente));
         when(pacienteRepository.save(any(Paciente.class)))
                 .thenReturn(paciente);
@@ -240,12 +255,21 @@ class SolicitacaoMedicaServiceTest {
 
     @Test
     void testCriarSolicitacao_ComMedicoResponsavelInvalido_LancaException() {
-        CriarSolicitacaoRequest request = criarRequestValido();
+        Set<Especialidade> especialidades = new HashSet<>();
+        especialidades.add(Especialidade.CARDIOLOGISTA);
+
+        CriarSolicitacaoRequest request = new CriarSolicitacaoRequest();
+        request.setMedicoId(1L);
         request.setMedicoResponsavelId(999L);
+        request.setNomePaciente("João Silva");
+        request.setCpfPrec("12345678901");
+        request.setOm("OM001");
+        request.setEspecialidades(especialidades);
+        request.setProcedimentos(umProcedimento());
 
         when(medicoRepository.findByIdAndCredenciadoTrue(1L))
                 .thenReturn(Optional.of(medicoCredenciado));
-        when(pacienteRepository.findByCpfOrPrec(any(), any()))
+        when(pacienteRepository.findByCpfPrec("12345678901"))
                 .thenReturn(Optional.of(paciente));
         when(medicoRepository.findById(999L))
                 .thenReturn(Optional.empty());
@@ -255,16 +279,24 @@ class SolicitacaoMedicaServiceTest {
 
     @Test
     void testCriarSolicitacao_ProcedimentoInvalido_LancaException() {
+        Set<Especialidade> especialidades = new HashSet<>();
+        especialidades.add(Especialidade.CARDIOLOGISTA);
+
         CriarSolicitacaoRequest.ProcedimentoQuantidade pq = new CriarSolicitacaoRequest.ProcedimentoQuantidade();
         pq.setProcedimentoCodigoDgp("INEXISTENTE");
         pq.setQuantidade(1);
 
-        CriarSolicitacaoRequest request = criarRequestValido();
+        CriarSolicitacaoRequest request = new CriarSolicitacaoRequest();
+        request.setMedicoId(1L);
+        request.setNomePaciente("João Silva");
+        request.setCpfPrec("12345678901");
+        request.setOm("OM001");
+        request.setEspecialidades(especialidades);
         request.setProcedimentos(List.of(pq));
 
         when(medicoRepository.findByIdAndCredenciadoTrue(1L))
                 .thenReturn(Optional.of(medicoCredenciado));
-        when(pacienteRepository.findByCpfOrPrec(any(), any()))
+        when(pacienteRepository.findByCpfPrec("12345678901"))
                 .thenReturn(Optional.of(paciente));
         when(pacienteRepository.save(any(Paciente.class)))
                 .thenReturn(paciente);
@@ -281,35 +313,5 @@ class SolicitacaoMedicaServiceTest {
                 .thenReturn(solicitacaoSalva);
 
         assertThrows(ProcedimentoInvalidoException.class, () -> service.criar(request));
-    }
-
-    @Test
-    void testReenviarEmail_ComNovoEmail_AtualizaPacienteEDispara() {
-        SolicitacaoMedica solicitacao = new SolicitacaoMedica();
-        solicitacao.setId(10L);
-        solicitacao.setTokenPublico("token-reenvio");
-        solicitacao.setPaciente(paciente);
-        solicitacao.setEmailDestinatario("antigo@email.com");
-
-        when(solicitacaoRepository.findById(10L)).thenReturn(Optional.of(solicitacao));
-        when(emailService.enviarEmailSolicitacao(any()))
-                .thenReturn(com.eagle.fusex.model.dto.ResultadoEnvioEmail.sucesso("novo@email.com"));
-
-        SolicitacaoResponse response = service.reenviarEmail(10L, "novo@email.com");
-
-        assertNotNull(response);
-        assertTrue(response.getEmailEnviado());
-        assertEquals("novo@email.com", paciente.getEmail());
-        assertEquals("novo@email.com", solicitacao.getEmailDestinatario());
-        assertEquals(com.eagle.fusex.model.enums.StatusEmail.ENVIADO, solicitacao.getStatusEmail());
-        verify(pacienteRepository).save(paciente);
-        verify(solicitacaoRepository).save(solicitacao);
-    }
-
-    @Test
-    void testReenviarEmail_SolicitacaoNaoEncontrada_LancaException() {
-        when(solicitacaoRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> service.reenviarEmail(999L, "novo@email.com"));
     }
 }

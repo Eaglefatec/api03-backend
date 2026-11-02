@@ -1,7 +1,6 @@
 package com.eagle.fusex.controller;
 
 import com.eagle.fusex.model.dto.request.CriarSolicitacaoRequest;
-import com.eagle.fusex.model.dto.request.ReenviarEmailRequest;
 import com.eagle.fusex.model.dto.response.PreGuiaConsolidadaResponse;
 import com.eagle.fusex.model.dto.response.SolicitacaoResponse;
 import com.eagle.fusex.service.PreGuiaConsolidadaService;
@@ -33,15 +32,6 @@ public class SolicitacaoMedicoController {
     public ResponseEntity<SolicitacaoResponse> criarSolicitacao(@Valid @RequestBody CriarSolicitacaoRequest request) {
         SolicitacaoResponse response = service.criar(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @PostMapping("/{id}/reenviar-email")
-    public ResponseEntity<SolicitacaoResponse> reenviarEmail(
-            @PathVariable Long id,
-            @RequestBody(required = false) ReenviarEmailRequest request) {
-        String novoEmail = request != null ? request.getNovoEmail() : null;
-        SolicitacaoResponse response = service.reenviarEmail(id, novoEmail);
-        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{token}/pre-guia")

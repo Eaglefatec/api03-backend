@@ -79,9 +79,7 @@ public class TriagemPreGuiaService {
         return new SolicitacaoPublicaResponse(
                 paciente != null ? paciente.getNome() : null,
                 paciente != null ? paciente.getOm() : null,
-                paciente != null ? paciente.getCpf() : null,
-                paciente != null ? paciente.getPrec() : null,
-                paciente != null ? paciente.getEmail() : null,
+                paciente != null ? paciente.getCpfPrec() : null,
                 paciente != null ? paciente.getIdade() : null,
                 paciente != null ? paciente.getTelefone() : null,
                 especialidadesCopia,
@@ -102,9 +100,6 @@ public class TriagemPreGuiaService {
         Ocs ocs = ocsRepository.findById(request.getOcsId())
                 .orElseThrow(() -> new OcsInvalidoException("Selecione uma clínica/OCS válida"));
 
-        // Validar se a OCS atende os procedimentos solicitados
-        validarCoberturaOcs(solicitacao, ocs);
-
         TriagemPreGuia triagem = new TriagemPreGuia();
         triagem.setSolicitacaoMedica(solicitacao);
         triagem.setOcs(ocs);
@@ -121,11 +116,8 @@ public class TriagemPreGuiaService {
             if (request.getTelefone() != null && !request.getTelefone().isBlank()) {
                 paciente.setTelefone(request.getTelefone().trim());
             }
-            if (request.getCpf() != null && !request.getCpf().isBlank()) {
-                paciente.setCpf(request.getCpf());
-            }
-            if (request.getPrec() != null && !request.getPrec().isBlank()) {
-                paciente.setPrec(request.getPrec());
+            if (request.getCpfPrec() != null && !request.getCpfPrec().isBlank()) {
+                paciente.setCpfPrec(request.getCpfPrec().trim());
             }
             pacienteRepository.save(paciente);
         }
@@ -138,33 +130,6 @@ public class TriagemPreGuiaService {
         );
 
         return new TriagemResponse("Triagem preenchida com sucesso", opcoes);
-    }
-
-    public void validarAcessoPublico(String token) {
-        validarSolicitacao(token);
-    }
-
-    public SolicitacaoMedica obterSolicitacaoValida(String token) {
-        return validarSolicitacao(token);
-    }
-
-    private void validarCoberturaOcs(SolicitacaoMedica solicitacao, Ocs ocs) {
-        List<SolicitacaoProcedimento> vinculos = solicitacaoProcedimentoRepository
-                .findBySolicitacaoMedicaId(solicitacao.getId());
-        if (vinculos.isEmpty()) {
-            return;
-        }
-
-        List<String> codigos = vinculos.stream()
-                .map(v -> v.getProcedimento().getProcCodigoDgp())
-                .toList();
-
-        long procedimentosCobertos = ocsProcedimentoRepository
-                .countByOcs_OcsIdAndProcedimento_ProcCodigoDgpIn(ocs.getOcsId(), codigos);
-
-        if (procedimentosCobertos < codigos.size()) {
-            throw new OcsInvalidoException("A clínica selecionada não atende a todos os procedimentos solicitados");
-        }
     }
 
     private void snapshotValoresProcedimentos(SolicitacaoMedica solicitacao, Ocs ocs) {
