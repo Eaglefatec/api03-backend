@@ -9,6 +9,7 @@ import com.eagle.fusex.model.entity.Lote;
 import com.eagle.fusex.model.entity.Ocs;
 import com.eagle.fusex.model.enums.StatusGuia;
 import com.eagle.fusex.repository.GuiaRepository;
+import com.eagle.fusex.repository.GuiaItemRepository;
 import com.eagle.fusex.repository.LoteRepository;
 import com.eagle.fusex.repository.OcsRepository;
 import com.eagle.fusex.storage.FileStorageService;
@@ -43,6 +44,9 @@ class LoteServiceTest {
     @Mock
     private FileStorageService fileStorageService;
 
+    @Mock
+    private GuiaItemRepository guiaItemRepository;
+
     private LoteService service;
     private Ocs ocsLogada;
     private Ocs outraOcs;
@@ -50,7 +54,7 @@ class LoteServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new LoteService(loteRepository, guiaRepository, ocsRepository, fileStorageService);
+        service = new LoteService(loteRepository, guiaRepository, guiaItemRepository, ocsRepository, fileStorageService);
 
         ocsLogada = new Ocs();
         ocsLogada.setOcsId(1L);
