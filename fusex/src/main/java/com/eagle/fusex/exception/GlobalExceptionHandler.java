@@ -101,6 +101,26 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.NOT_FOUND, "Recurso não encontrado: " + ex.getResourcePath());
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxUploadSizeExceededException(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        log.warn("Arquivo enviado excede o tamanho máximo permitido: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "O arquivo excede o limite de 5 MB.");
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingServletRequestPartException(
+            org.springframework.web.multipart.support.MissingServletRequestPartException ex) {
+        log.warn("Parte obrigatória do upload ausente: {}", ex.getRequestPartName());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Selecione um arquivo PDF.");
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadableException(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        log.warn("Corpo JSON da requisição inválido ou malformado: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Corpo da requisição inválido ou malformado.");
+    }
+
     @ExceptionHandler(org.springframework.web.bind.ServletRequestBindingException.class)
     public ResponseEntity<Map<String, Object>> handleServletRequestBindingException(org.springframework.web.bind.ServletRequestBindingException ex) {
         log.warn("Parâmetros de requisição inválidos ou ausentes: {}", ex.getMessage());
