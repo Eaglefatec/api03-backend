@@ -1,10 +1,12 @@
 package com.eagle.fusex.service;
 
 import com.eagle.fusex.exception.ArquivoInvalidoException;
+import com.eagle.fusex.exception.PacienteNaoEncontradoException;
 import com.eagle.fusex.exception.ResourceNotFoundException;
 import com.eagle.fusex.exception.UnauthorizedOperationException;
 import com.eagle.fusex.exception.ValidationException;
 import com.eagle.fusex.model.dto.ResultadoEnvioEmail;
+import com.eagle.fusex.model.dto.request.CadastroPacienteConfirmacaoDTO;
 import com.eagle.fusex.model.dto.request.DecisaoAssinaturaRequest;
 import com.eagle.fusex.model.dto.response.ArquivoLoteDownload;
 import com.eagle.fusex.model.dto.response.GuiaAssinaturaDetalheResponse;
@@ -34,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -90,6 +93,11 @@ public class GuiaAssinaturaService {
 
     @Transactional
     public GuiaAssinaturaResponse enviarGuiaParaAssinatura(MultipartFile arquivo) {
+        return enviarGuiaParaAssinatura(arquivo, null);
+    }
+
+    @Transactional
+    public GuiaAssinaturaResponse enviarGuiaParaAssinatura(MultipartFile arquivo, CadastroPacienteConfirmacaoDTO confirmacao) {
         validarArquivoPdf5Mb(arquivo);
 
         byte[] bytesPdf;
@@ -133,25 +141,93 @@ public class GuiaAssinaturaService {
             if (beneficiarioEmail == null || beneficiarioEmail.isBlank()) beneficiarioEmail = pacSol.getEmail();
         }
 
+        // Busca o beneficiário no banco de dados (tabela paciente) por Prec CP ou por Nome
+        Paciente pacienteCadastrado = null;
         if (beneficiarioPrec != null && !beneficiarioPrec.isBlank()) {
-            Paciente pac = pacienteRepository.findByCpfPrec(beneficiarioPrec).orElse(null);
-            if (pac != null) {
-                if (beneficiarioNome == null || beneficiarioNome.isBlank()) beneficiarioNome = pac.getNome();
-                if (beneficiarioEmail == null || beneficiarioEmail.isBlank()) beneficiarioEmail = pac.getEmail();
+            pacienteCadastrado = pacienteRepository.findByCpfPrec(beneficiarioPrec).orElse(null);
+        }
+        if (pacienteCadastrado == null && beneficiarioNome != null && !beneficiarioNome.isBlank()) {
+            pacienteCadastrado = localizarPacientePorNome(beneficiarioNome);
+        }
+
+        // Se encontrado no banco, utiliza os dados oficiais cadastrados (especialmente o e-mail)
+        if (pacienteCadastrado != null) {
+            beneficiarioNome = pacienteCadastrado.getNome();
+            if (beneficiarioPrec == null || beneficiarioPrec.isBlank()) {
+                beneficiarioPrec = pacienteCadastrado.getPrec();
             }
-        } else if (beneficiarioNome != null && !beneficiarioNome.isBlank()) {
-            List<Paciente> encontrados = pacienteRepository.findTop10ByNomeContainingIgnoreCaseOrderByNome(beneficiarioNome);
-            if (!encontrados.isEmpty()) {
-                Paciente pac = encontrados.get(0);
-                beneficiarioPrec = pac.getPrec();
-                if (beneficiarioEmail == null || beneficiarioEmail.isBlank()) beneficiarioEmail = pac.getEmail();
+            beneficiarioEmail = pacienteCadastrado.getEmail();
+        } else if (confirmacao != null && confirmacao.confirmarCadastro()) {
+            // Operador confirmou o cadastro do paciente via modal de inclusão com e-mail preenchido
+            String nomeFinal = (confirmacao.nome() != null && !confirmacao.nome().isBlank())
+                    ? confirmacao.nome().trim()
+                    : (beneficiarioNome != null ? beneficiarioNome : fallback[0]);
+            String precFinal = (confirmacao.prec() != null && !confirmacao.prec().isBlank())
+                    ? confirmacao.prec().trim()
+                    : (beneficiarioPrec != null ? beneficiarioPrec : fallback[1]);
+            String cpfFinal = (confirmacao.cpf() != null && !confirmacao.cpf().isBlank())
+                    ? confirmacao.cpf().trim()
+                    : precFinal;
+            String omFinal = (confirmacao.om() != null && !confirmacao.om().isBlank())
+                    ? confirmacao.om().trim()
+                    : "FUSEX";
+            String emailFinal = confirmacao.email() != null ? confirmacao.email().trim().toLowerCase() : null;
+            if (emailFinal == null || emailFinal.isBlank() || !emailFinal.contains("@")) {
+                throw new ValidationException("O e-mail do beneficiário é obrigatório para cadastrá-lo e emitir a guia.");
             }
+
+            cpfFinal = truncar(Paciente.normalizarCpf(cpfFinal), 14);
+            if (cpfFinal == null || cpfFinal.isBlank()) cpfFinal = "10000000000";
+            precFinal = truncar(precFinal, 30);
+            omFinal = truncar(omFinal, 10);
+            nomeFinal = truncar(nomeFinal, 255);
+            emailFinal = truncar(emailFinal, 255);
+            String telefoneFinal = truncar(confirmacao.telefone(), 20);
+
+            if (pacienteCadastrado == null && precFinal != null && !precFinal.isBlank()) {
+                pacienteCadastrado = pacienteRepository.findByCpfPrec(precFinal).orElse(null);
+            }
+            if (pacienteCadastrado == null && cpfFinal != null && !cpfFinal.isBlank()) {
+                pacienteCadastrado = pacienteRepository.findByCpf(cpfFinal).orElse(null);
+            }
+
+            if (pacienteCadastrado != null) {
+                pacienteCadastrado.setNome(nomeFinal);
+                pacienteCadastrado.setEmail(emailFinal);
+                if (confirmacao.idade() != null) pacienteCadastrado.setIdade(confirmacao.idade());
+                if (telefoneFinal != null && !telefoneFinal.isBlank()) pacienteCadastrado.setTelefone(telefoneFinal);
+                pacienteCadastrado = pacienteRepository.save(pacienteCadastrado);
+                log.info("Cadastro do beneficiário '{}' (Prec: {}) atualizado com o e-mail: {}",
+                        pacienteCadastrado.getNome(), pacienteCadastrado.getPrec(), pacienteCadastrado.getEmail());
+            } else {
+                pacienteCadastrado = new Paciente(nomeFinal, cpfFinal, precFinal, omFinal, emailFinal,
+                        confirmacao.idade(), telefoneFinal);
+                pacienteCadastrado = pacienteRepository.save(pacienteCadastrado);
+                log.info("Beneficiário '{}' (Prec: {}) cadastrado pelo Emissor de Guias durante o fluxo de upload.",
+                        pacienteCadastrado.getNome(), pacienteCadastrado.getPrec());
+            }
+
+            beneficiarioNome = pacienteCadastrado.getNome();
+            beneficiarioPrec = pacienteCadastrado.getPrec();
+            beneficiarioEmail = pacienteCadastrado.getEmail();
+        } else {
+            // Beneficiário não localizado no banco e ainda não confirmado pelo operador:
+            // Interrompe o processo e solicita confirmação e preenchimento dos dados no modal
+            String nomeDescricao = beneficiarioNome != null ? beneficiarioNome : "Não identificado no PDF";
+            String precDescricao = beneficiarioPrec != null ? beneficiarioPrec : "Não identificado";
+            throw new PacienteNaoEncontradoException(
+                    "O beneficiário '" + nomeDescricao + "' (Prec CP: " + precDescricao
+                            + ") não foi encontrado no cadastro do FuSEx. Deseja cadastrá-lo para prosseguir com a emissão da guia?",
+                    extraidos
+            );
         }
 
         if (beneficiarioNome == null || beneficiarioNome.isBlank()) beneficiarioNome = fallback[0];
         if (beneficiarioPrec == null || beneficiarioPrec.isBlank()) beneficiarioPrec = fallback[1];
         if (ocsNome == null || ocsNome.isBlank()) ocsNome = fallback[2];
-        if (beneficiarioEmail == null || beneficiarioEmail.isBlank()) beneficiarioEmail = fallback[3];
+        if (beneficiarioEmail == null || beneficiarioEmail.isBlank()) {
+            beneficiarioEmail = gerarEmailInstitucional(beneficiarioNome);
+        }
 
         beneficiarioNome = truncar(beneficiarioNome.trim(), 255);
         beneficiarioPrec = truncar(beneficiarioPrec.trim(), 50);
@@ -621,6 +697,49 @@ public class GuiaAssinaturaService {
         return authorities.stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toSet());
+    }
+
+    private Paciente localizarPacientePorNome(String nome) {
+        if (nome == null || nome.isBlank()) return null;
+        String limpo = nome.trim();
+        List<Paciente> encontrados = pacienteRepository.findTop10ByNomeContainingIgnoreCaseOrderByNome(limpo);
+        if (!encontrados.isEmpty()) {
+            return encontrados.get(0);
+        }
+        String normalizado = normalizarTexto(limpo);
+        if (normalizado.length() >= 4) {
+            List<Paciente> todos = pacienteRepository.findAll();
+            for (Paciente p : todos) {
+                if (p.getNome() != null) {
+                    String pNorm = normalizarTexto(p.getNome());
+                    if (pNorm.equalsIgnoreCase(normalizado)
+                            || pNorm.contains(normalizado)
+                            || (pNorm.length() >= 4 && normalizado.contains(pNorm))) {
+                        return p;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private String normalizarTexto(String s) {
+        if (s == null) return "";
+        return Normalizer.normalize(s, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                .toLowerCase();
+    }
+
+    private String gerarEmailInstitucional(String nome) {
+        if (nome == null || nome.isBlank()) {
+            return "beneficiario@fusex.eb.mil.br";
+        }
+        String limpo = normalizarTexto(nome).replaceAll("[^a-z0-9 ]", "").trim();
+        String[] partes = limpo.split("\\s+");
+        if (partes.length >= 2) {
+            return partes[0] + "." + partes[partes.length - 1] + "@fusex.eb.mil.br";
+        }
+        return partes[0] + "@fusex.eb.mil.br";
     }
 
     private GuiaAssinaturaResponse toResponse(GuiaAssinatura g, String mensagem) {

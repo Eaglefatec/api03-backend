@@ -28,6 +28,17 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    @ExceptionHandler(PacienteNaoEncontradoException.class)
+    public ResponseEntity<Map<String, Object>> handlePacienteNaoEncontradoException(PacienteNaoEncontradoException ex) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("timestamp", LocalDateTime.now());
+        errorResponse.put("status", HttpStatus.UNPROCESSABLE_ENTITY.value());
+        errorResponse.put("codigo", "PACIENTE_NAO_ENCONTRADO");
+        errorResponse.put("error", ex.getMessage());
+        errorResponse.put("dadosExtraidos", ex.getDadosExtraidos());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(errorResponse);
+    }
+
     @ExceptionHandler(SolicitacaoNaoEncontradaException.class)
     public ResponseEntity<Map<String, Object>> handleSolicitacaoNaoEncontradaException(SolicitacaoNaoEncontradaException ex) {
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());

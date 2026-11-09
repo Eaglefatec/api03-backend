@@ -1,6 +1,6 @@
-# Guia de Referência Para Testar as US04, US05 e US06 — Assinatura e Envio de Guias
+# Guia Passo a Passo de Teste e Homologação — Assinatura e Envio de Guias (US04, US05 e US06)
 
-Como as telas e funcionalidades foram escritas de forma desacoplada do Emissor de Guias pelo fato do mesmo não ter o Login e tela inicial apropriadas para a integração dessas telas e funcionalidades, criei essa documentação para auxiliar quem for executar os testes e consiga rodar a aplicação, abrir as telas no navegador e testar todo o funcionamento do **Front-end**, do **Back-end**, do **Banco de Dados** e da **gravação dos PDFs assinados**, desde o envio inicial do PDF até o disparo do e-mail ao beneficiário.
+Este guia foi escrito de forma **simples, didática e passo a passo** para que qualquer pessoa ou desenvolvedor iniciante consiga rodar a aplicação, abrir as telas no navegador e testar todo o funcionamento do **Front-end**, do **Back-end**, do **Banco de Dados** e da **gravação dos PDFs assinados**, desde o envio inicial do PDF até o disparo do e-mail ao beneficiário.
 
 ---
 

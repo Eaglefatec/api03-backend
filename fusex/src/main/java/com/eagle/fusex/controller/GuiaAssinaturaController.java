@@ -36,8 +36,31 @@ public class GuiaAssinaturaController {
     }
 
     @PostMapping(value = "/guias", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<GuiaAssinaturaResponse> enviarGuia(@RequestParam("arquivo") MultipartFile arquivo) {
-        GuiaAssinaturaResponse response = guiaAssinaturaService.enviarGuiaParaAssinatura(arquivo);
+    public ResponseEntity<GuiaAssinaturaResponse> enviarGuia(
+            @RequestParam("arquivo") MultipartFile arquivo,
+            @RequestParam(value = "confirmarCadastro", required = false, defaultValue = "false") boolean confirmarCadastro,
+            @RequestParam(value = "pacienteNome", required = false) String pacienteNome,
+            @RequestParam(value = "pacienteCpf", required = false) String pacienteCpf,
+            @RequestParam(value = "pacientePrec", required = false) String pacientePrec,
+            @RequestParam(value = "pacienteOm", required = false) String pacienteOm,
+            @RequestParam(value = "pacienteEmail", required = false) String pacienteEmail,
+            @RequestParam(value = "pacienteTelefone", required = false) String pacienteTelefone,
+            @RequestParam(value = "pacienteIdade", required = false) Integer pacienteIdade) {
+
+        com.eagle.fusex.model.dto.request.CadastroPacienteConfirmacaoDTO confirmacao = null;
+        if (confirmarCadastro) {
+            confirmacao = new com.eagle.fusex.model.dto.request.CadastroPacienteConfirmacaoDTO(
+                    true,
+                    pacienteNome,
+                    pacienteCpf,
+                    pacientePrec,
+                    pacienteOm,
+                    pacienteEmail,
+                    pacienteTelefone,
+                    pacienteIdade
+            );
+        }
+        GuiaAssinaturaResponse response = guiaAssinaturaService.enviarGuiaParaAssinatura(arquivo, confirmacao);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
