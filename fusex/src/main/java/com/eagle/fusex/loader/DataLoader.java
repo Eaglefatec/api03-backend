@@ -43,11 +43,20 @@ public class DataLoader implements CommandLineRunner {
         garantirPaciente("ANDRÉ LUÍS QUIRINO DE ALMEIDA", "12435976600", "12435976600", "FUSEX", "andre.almeida@fusex.eb.mil.br", 48, "(12) 98888-2222");
         garantirPaciente("ROSANA TICIANELLI PINTO", "98223010000", "98223010000", "FUSEX", "rosana.pinto@fusex.eb.mil.br", 62, "(12) 98888-3333");
 
-        if (ocsRepository.findByOcsNome("CENTRO DIAGNÓSTICO ANDRADE LTDA").isEmpty()) {
+        var ocsExistente = ocsRepository.findByOcsInscricaoFederal("07.185.057/0001-51")
+                .or(() -> ocsRepository.findByOcsNome("CENTRO DIAGNÓSTICO ANDRADE LTDA"));
+
+        if (ocsExistente.isEmpty()) {
             com.eagle.fusex.model.entity.Ocs ocsAndrade = new com.eagle.fusex.model.entity.Ocs();
             ocsAndrade.setOcsNome("CENTRO DIAGNÓSTICO ANDRADE LTDA");
             ocsAndrade.setOcsInscricaoFederal("07.185.057/0001-51");
             ocsRepository.save(ocsAndrade);
+        } else {
+            com.eagle.fusex.model.entity.Ocs ocs = ocsExistente.get();
+            if (!"CENTRO DIAGNÓSTICO ANDRADE LTDA".equals(ocs.getOcsNome())) {
+                ocs.setOcsNome("CENTRO DIAGNÓSTICO ANDRADE LTDA");
+                ocsRepository.save(ocs);
+            }
         }
 
         if (ocsRepository.findByLoginUsuario("ocs").isEmpty()) {

@@ -11,6 +11,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.pdfbox.text.TextPosition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -226,16 +227,27 @@ public class GuiaAssinaturaPdfService {
                 return gerarPdfEspelhoGuia(guia, procedimentos);
             }
             PDPage page = document.getPage(document.getNumberOfPages() - 1);
+            PDRectangle crop = page.getCropBox() != null ? page.getCropBox() : page.getMediaBox();
+            float pageHeight = crop != null ? crop.getHeight() : 842f;
+
+            // Localiza dinamicamente as coordenadas exatas dos campos de assinatura na página
+            LocalizadorAssinaturasPdf localizador = new LocalizadorAssinaturasPdf(pageHeight);
+            int ultimaPagina = document.getNumberOfPages();
+            localizador.setStartPage(ultimaPagina);
+            localizador.setEndPage(ultimaPagina);
+            localizador.getText(document);
+
+            boolean ehFormularioOficialFusex = localizador.campoMedico != null
+                    || localizador.campoSecao != null
+                    || new PDFTextStripper().getText(document).contains("Chefe do FuSEx");
+
             PDType1Font fontBold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
             PDType1Font fontRegular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-
-            String texto = new PDFTextStripper().getText(document);
-            boolean ehFormularioOficialFusex = texto.contains("Assinatura Auditoria") || texto.contains("Chefe do FuSEx");
 
             try (PDPageContentStream cs = new PDPageContentStream(
                     document, page, PDPageContentStream.AppendMode.APPEND, true, true)) {
                 if (ehFormularioOficialFusex) {
-                    desenharAssinaturasEmFormularioOficial(document, cs, fontBold, fontRegular, guia);
+                    desenharAssinaturasEmFormularioOficial(document, page, cs, fontBold, fontRegular, guia, localizador);
                 } else {
                     desenharRodapeAssinaturas(document, cs, fontBold, fontRegular, guia, 110);
                 }
@@ -251,26 +263,137 @@ public class GuiaAssinaturaPdfService {
     }
 
     private void desenharAssinaturasEmFormularioOficial(PDDocument document,
+                                                        PDPage page,
                                                         PDPageContentStream cs,
                                                         PDType1Font fontBold,
                                                         PDType1Font fontRegular,
-                                                        GuiaAssinatura guia) throws IOException {
-        // Alinhamento direto acima das linhas do formulário oficial FUSEX (yBottom ~ 287)
+                                                        GuiaAssinatura guia,
+                                                        LocalizadorAssinaturasPdf localizador) throws IOException {
+        PDRectangle crop = page.getCropBox() != null ? page.getCropBox() : page.getMediaBox();
+        float pageHeight = crop != null ? crop.getHeight() : 842f;
+        float pageWidth = crop != null ? crop.getWidth() : 595f;
+
+        // Fallbacks inteligentes proporcionais às dimensões da página caso algum campo não seja localizado
+        PosicaoCampoAssinatura posMed = localizador != null && localizador.campoMedico != null
+                ? localizador.campoMedico
+                : PosicaoCampoAssinatura.fallback(pageWidth * 0.12f, pageHeight * 0.15f);
+
+        PosicaoCampoAssinatura posSec = localizador != null && localizador.campoSecao != null
+                ? localizador.campoSecao
+                : PosicaoCampoAssinatura.fallback(pageWidth * 0.65f, posMed.yBottom);
+
+        float sigW = 150f;
+        float sigH = 42f;
+
+        // Centraliza as assinaturas horizontalmente sobre o centro de cada campo/rótulo
+        float xMed = (posMed.x + (posMed.largura / 2f)) - (sigW / 2f);
+        float xSec = (posSec.x + (posSec.largura / 2f)) - (sigW / 2f);
+
+        // Garante margens seguras na página
+        xMed = Math.max(30f, Math.min(xMed, pageWidth - sigW - 30f));
+        xSec = Math.max(30f, Math.min(xSec, pageWidth - sigW - 30f));
+
+        // Altura: apoia a imagem imediatamente acima da linha horizontal do campo (a linha fica ~10 a 14pt acima do rótulo)
+        float ySigMed = posMed.yBottom + 12f;
+        float ySigSec = posSec.yBottom + 12f;
+
         if (guia.getDataAssinaturaMedico() != null) {
-            desenharAssinaturaBase64(document, cs, fontBold, guia.getAssinaturaMedicoBase64(), 65, 300, 175, 45, true);
-            escreverTexto(cs, fontRegular, 7, 55, 276,
+            desenharAssinaturaBase64(document, cs, fontBold, guia.getAssinaturaMedicoBase64(), xMed, ySigMed, sigW, sigH, true);
+            escreverTexto(cs, fontRegular, 7, posMed.x, posMed.yBottom - 11f,
                     "Assinado em: " + guia.getDataAssinaturaMedico().format(FMT_DATA_HORA));
         }
 
         if (guia.getDataAssinaturaSecao() != null) {
-            desenharAssinaturaBase64(document, cs, fontBold, guia.getAssinaturaSecaoBase64(), 350, 300, 175, 45, true);
-            escreverTexto(cs, fontRegular, 7, 350, 276,
+            desenharAssinaturaBase64(document, cs, fontBold, guia.getAssinaturaSecaoBase64(), xSec, ySigSec, sigW, sigH, true);
+            escreverTexto(cs, fontRegular, 7, posSec.x, posSec.yBottom - 11f,
                     "Assinado em: " + guia.getDataAssinaturaSecao().format(FMT_DATA_HORA));
         }
 
         if (guia.getDataValidade() != null && guia.getDataAssinaturaSecao() != null) {
-            escreverTexto(cs, fontBold, 8, 55, 264,
+            escreverTexto(cs, fontBold, 7, posMed.x, posMed.yBottom - 21f,
                     "Validade de 60 dias homologada ate " + guia.getDataValidade().format(FMT_DATA));
+        }
+    }
+
+    public static class PosicaoCampoAssinatura {
+        public final float x;
+        public final float yBottom;
+        public final float largura;
+        public final float altura;
+        public final boolean encontrado;
+
+        public PosicaoCampoAssinatura(float x, float yBottom, float largura, float altura, boolean encontrado) {
+            this.x = x;
+            this.yBottom = yBottom;
+            this.largura = largura;
+            this.altura = altura;
+            this.encontrado = encontrado;
+        }
+
+        public static PosicaoCampoAssinatura fallback(float x, float yBottom) {
+            return new PosicaoCampoAssinatura(x, yBottom, 160f, 10f, false);
+        }
+    }
+
+    private static class LocalizadorAssinaturasPdf extends PDFTextStripper {
+        private final float pageHeight;
+        private PosicaoCampoAssinatura campoMedico;
+        private PosicaoCampoAssinatura campoSecao;
+
+        public LocalizadorAssinaturasPdf(float pageHeight) throws IOException {
+            this.pageHeight = pageHeight;
+        }
+
+        @Override
+        protected void writeString(String text, List<TextPosition> textPositions) throws IOException {
+            if (text == null || textPositions.isEmpty()) {
+                super.writeString(text, textPositions);
+                return;
+            }
+            String norm = normalizarTextoBusca(text);
+
+            // Garante que só busca na metade inferior da página para não confundir com cabeçalhos
+            TextPosition first = textPositions.get(0);
+            float yBottomEst = pageHeight - first.getYDirAdj();
+            if (yBottomEst < pageHeight * 0.65f) {
+                if (norm.contains("auditoria") && (norm.contains("previa") || norm.contains("med") || norm.contains("dent") || norm.contains("assinatura"))) {
+                    campoMedico = extrairBloco(textPositions, norm, "assinatura");
+                    if (campoMedico == null) {
+                        campoMedico = extrairBloco(textPositions, norm, "auditoria");
+                    }
+                }
+
+                if (norm.contains("chefe") && (norm.contains("fusex") || norm.contains("secao") || norm.contains("seçao"))) {
+                    campoSecao = extrairBloco(textPositions, norm, "chefe");
+                }
+            }
+
+            super.writeString(text, textPositions);
+        }
+
+        private PosicaoCampoAssinatura extrairBloco(List<TextPosition> textPositions, String textNorm, String keyword) {
+            int idx = textNorm.indexOf(keyword);
+            if (idx < 0) idx = 0;
+            int startIdx = Math.min(idx, textPositions.size() - 1);
+            int endIdx = textPositions.size() - 1;
+
+            TextPosition first = textPositions.get(startIdx);
+            TextPosition last = textPositions.get(endIdx);
+
+            float x = first.getXDirAdj();
+            float yTop = first.getYDirAdj();
+            float w = (last.getXDirAdj() + last.getWidthDirAdj()) - x;
+            float h = first.getHeightDir();
+            float yBottom = pageHeight - yTop;
+
+            return new PosicaoCampoAssinatura(x, yBottom, w, h, true);
+        }
+
+        private static String normalizarTextoBusca(String s) {
+            if (s == null) return "";
+            return Normalizer.normalize(s, Normalizer.Form.NFD)
+                    .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                    .toLowerCase();
         }
     }
 

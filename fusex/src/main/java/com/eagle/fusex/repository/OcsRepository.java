@@ -13,6 +13,7 @@ import java.util.Set;
 
 public interface OcsRepository extends JpaRepository<Ocs, Long> {
     Optional<Ocs> findByOcsNome(String ocsNome);
+    Optional<Ocs> findByOcsInscricaoFederal(String ocsInscricaoFederal);
     List<Ocs> findDistinctByEspecialidadesIn(Set<Especialidade> especialidades);
     Optional<Ocs> findByLoginUsuario(String loginUsuario);
     Optional<Ocs> findFirstByOrderByOcsIdAsc();
