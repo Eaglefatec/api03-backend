@@ -16,6 +16,7 @@ import com.eagle.fusex.model.dto.response.ProcedimentoGuiaDTO;
 import com.eagle.fusex.model.entity.GuiaAssinatura;
 import com.eagle.fusex.model.entity.Ocs;
 import com.eagle.fusex.model.entity.Paciente;
+import com.eagle.fusex.model.entity.SolicitacaoMedica;
 import com.eagle.fusex.model.enums.DecisaoAssinatura;
 import com.eagle.fusex.model.enums.StatusEmail;
 import com.eagle.fusex.model.enums.StatusEsteiraAssinatura;
@@ -96,8 +97,18 @@ public class GuiaAssinaturaService {
         return enviarGuiaParaAssinatura(arquivo, null);
     }
 
+    public record DadosPreGuia(SolicitacaoMedica solicitacao, String beneficiarioNome, String beneficiarioPrec,
+                               String beneficiarioEmail, String ocsNome) {
+    }
+
     @Transactional
     public GuiaAssinaturaResponse enviarGuiaParaAssinatura(MultipartFile arquivo, CadastroPacienteConfirmacaoDTO confirmacao) {
+        return enviarGuiaParaAssinatura(arquivo, confirmacao, null);
+    }
+
+    @Transactional
+    public GuiaAssinaturaResponse enviarGuiaParaAssinatura(MultipartFile arquivo, CadastroPacienteConfirmacaoDTO confirmacao,
+                                                          DadosPreGuia preGuia) {
         validarArquivoPdf5Mb(arquivo);
 
         byte[] bytesPdf;
@@ -143,7 +154,14 @@ public class GuiaAssinaturaService {
 
         // Busca o beneficiário no banco de dados (tabela paciente) por Prec CP ou por Nome
         Paciente pacienteCadastrado = null;
-        if (beneficiarioPrec != null && !beneficiarioPrec.isBlank()) {
+        if (preGuia != null) {
+            beneficiarioNome = preGuia.beneficiarioNome();
+            beneficiarioPrec = preGuia.beneficiarioPrec();
+            beneficiarioEmail = preGuia.beneficiarioEmail();
+            ocsNome = preGuia.ocsNome();
+            pacienteCadastrado = preGuia.solicitacao().getPaciente();
+        }
+        if (pacienteCadastrado == null && beneficiarioPrec != null && !beneficiarioPrec.isBlank()) {
             pacienteCadastrado = pacienteRepository.findByCpfPrec(beneficiarioPrec).orElse(null);
         }
         if (pacienteCadastrado == null && beneficiarioNome != null && !beneficiarioNome.isBlank()) {
@@ -156,7 +174,9 @@ public class GuiaAssinaturaService {
             if (beneficiarioPrec == null || beneficiarioPrec.isBlank()) {
                 beneficiarioPrec = pacienteCadastrado.getPrec();
             }
-            beneficiarioEmail = pacienteCadastrado.getEmail();
+            if (pacienteCadastrado.getEmail() != null && !pacienteCadastrado.getEmail().isBlank()) {
+                beneficiarioEmail = pacienteCadastrado.getEmail();
+            }
         } else if (confirmacao != null && confirmacao.confirmarCadastro()) {
             // Operador confirmou o cadastro do paciente via modal de inclusão com e-mail preenchido
             String nomeFinal = (confirmacao.nome() != null && !confirmacao.nome().isBlank())
@@ -248,6 +268,7 @@ public class GuiaAssinaturaService {
         guia.setBeneficiarioEmail(beneficiarioEmail);
         guia.setOcsNome(ocsNome);
         guia.setOcs(ocsEntidade);
+        guia.setSolicitacaoMedica(preGuia != null ? preGuia.solicitacao() : null);
         guia.setProcedimentosResumo(pdfService.serializarProcedimentos(extraidos.procedimentos()));
         guia.setNomeArquivoOriginal(nomeOriginal);
         guia.setCaminhoArquivoOriginal(caminhoSalvo);
