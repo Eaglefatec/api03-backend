@@ -59,7 +59,7 @@ class GuiaAssinaturaFlywayTest {
         strictFlyway.migrate();
 
         assertNotNull(strictFlyway.info().current());
-        assertEquals("24", strictFlyway.info().current().getVersion().getVersion());
+        assertEquals("25", strictFlyway.info().current().getVersion().getVersion());
 
         try (StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
                 .applySetting(AvailableSettings.DATASOURCE, strictDs)
@@ -91,7 +91,7 @@ class GuiaAssinaturaFlywayTest {
     @DisplayName("Deve subir a aplicação com a migration V23, carregar os dados iniciais e salvar nova guia")
     void deveSubirContextoComFlywayV23EPersistirGuia() {
         assertNotNull(flyway.info().current());
-        assertEquals("24", flyway.info().current().getVersion().getVersion());
+        assertEquals("25", flyway.info().current().getVersion().getVersion());
 
         assertTrue(guiaAssinaturaRepository.existsByNumeroGuia("202610700"));
         assertTrue(guiaAssinaturaRepository.existsByNumeroGuia("202610701"));
