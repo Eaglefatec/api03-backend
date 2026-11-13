@@ -2,12 +2,15 @@ package com.eagle.fusex.service;
 
 import com.eagle.fusex.exception.ArquivoInvalidoException;
 import com.eagle.fusex.exception.MedicoInvalidoException;
+import com.eagle.fusex.exception.SolicitacaoNaoEncontradaException;
 import com.eagle.fusex.model.dto.response.EncaminhamentoResponse;
 import com.eagle.fusex.model.entity.Encaminhamento;
 import com.eagle.fusex.model.entity.Medico;
+import com.eagle.fusex.model.entity.SolicitacaoMedica;
 import com.eagle.fusex.model.enums.StatusEncaminhamento;
 import com.eagle.fusex.repository.EncaminhamentoRepository;
 import com.eagle.fusex.repository.MedicoRepository;
+import com.eagle.fusex.repository.SolicitacaoMedicaRepository;
 import com.eagle.fusex.storage.FileStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,17 +28,26 @@ public class EncaminhamentoService {
     private final MedicoRepository medicoRepository;
     private final EncaminhamentoRepository encaminhamentoRepository;
     private final FileStorageService fileStorageService;
+    private final SolicitacaoMedicaRepository solicitacaoRepository;
 
     public EncaminhamentoService(MedicoRepository medicoRepository,
                                  EncaminhamentoRepository encaminhamentoRepository,
-                                 FileStorageService fileStorageService) {
+                                 FileStorageService fileStorageService,
+                                 SolicitacaoMedicaRepository solicitacaoRepository) {
         this.medicoRepository = medicoRepository;
         this.encaminhamentoRepository = encaminhamentoRepository;
         this.fileStorageService = fileStorageService;
+        this.solicitacaoRepository = solicitacaoRepository;
     }
 
     public EncaminhamentoResponse enviarEncaminhamento(Long medicoId, MultipartFile arquivo) {
+        return enviarEncaminhamento(medicoId, null, arquivo);
+    }
+
+    public EncaminhamentoResponse enviarEncaminhamento(Long medicoId, Long solicitacaoId, MultipartFile arquivo) {
         Medico medico = validarMedico(medicoId);
+        SolicitacaoMedica solicitacao = solicitacaoId == null ? null : solicitacaoRepository.findById(solicitacaoId)
+                .orElseThrow(() -> new SolicitacaoNaoEncontradaException("Solicitação não encontrada"));
         validarArquivo(arquivo);
 
         LocalDateTime dataHora = LocalDateTime.now();
@@ -47,6 +59,7 @@ public class EncaminhamentoService {
 
         Encaminhamento encaminhamento = new Encaminhamento();
         encaminhamento.setMedico(medico);
+        encaminhamento.setSolicitacaoMedica(solicitacao);
         encaminhamento.setDataHora(dataHora);
         encaminhamento.setNomeArquivo(nomeArquivoOriginal);
         encaminhamento.setCaminhoArquivo(caminhoArquivo);

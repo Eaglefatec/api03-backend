@@ -17,6 +17,10 @@ public class Encaminhamento {
     @JoinColumn(name = "medico_id", nullable = false)
     private Medico medico;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "solicitacao_id")
+    private SolicitacaoMedica solicitacaoMedica;
+
     @Column(nullable = false)
     private LocalDateTime dataHora;
 
@@ -60,6 +64,14 @@ public class Encaminhamento {
 
     public void setMedico(Medico medico) {
         this.medico = medico;
+    }
+
+    public SolicitacaoMedica getSolicitacaoMedica() {
+        return solicitacaoMedica;
+    }
+
+    public void setSolicitacaoMedica(SolicitacaoMedica solicitacaoMedica) {
+        this.solicitacaoMedica = solicitacaoMedica;
     }
 
     public LocalDateTime getDataHora() {

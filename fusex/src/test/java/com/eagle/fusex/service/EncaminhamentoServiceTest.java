@@ -7,6 +7,10 @@ import com.eagle.fusex.model.entity.Encaminhamento;
 import com.eagle.fusex.model.entity.Medico;
 import com.eagle.fusex.repository.EncaminhamentoRepository;
 import com.eagle.fusex.repository.MedicoRepository;
+import com.eagle.fusex.repository.SolicitacaoMedicaRepository;
+import com.eagle.fusex.model.entity.SolicitacaoMedica;
+import com.eagle.fusex.exception.SolicitacaoNaoEncontradaException;
+import org.mockito.ArgumentCaptor;
 import com.eagle.fusex.storage.FileStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +38,9 @@ class EncaminhamentoServiceTest {
     private FileStorageService fileStorageService;
 
     @Mock
+    private SolicitacaoMedicaRepository solicitacaoRepository;
+
+    @Mock
     private MultipartFile arquivo;
 
     private EncaminhamentoService service;
@@ -41,7 +48,7 @@ class EncaminhamentoServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new EncaminhamentoService(medicoRepository, encaminhamentoRepository, fileStorageService);
+        service = new EncaminhamentoService(medicoRepository, encaminhamentoRepository, fileStorageService, solicitacaoRepository);
     }
 
     @Test
@@ -115,5 +122,36 @@ class EncaminhamentoServiceTest {
         assertThrows(ArquivoInvalidoException.class, () -> {
             service.enviarEncaminhamento(1L, arquivo);
         });
+    }
+
+    @Test
+    void testEnviarEncaminhamentoVinculadoASolicitacao() {
+        Medico medico = new Medico("Dr. João", "123456", true);
+        SolicitacaoMedica solicitacao = new SolicitacaoMedica();
+        solicitacao.setId(7L);
+        when(medicoRepository.findByIdAndCredenciadoTrue(1L)).thenReturn(Optional.of(medico));
+        when(solicitacaoRepository.findById(7L)).thenReturn(Optional.of(solicitacao));
+        when(arquivo.isEmpty()).thenReturn(false);
+        when(arquivo.getContentType()).thenReturn("application/pdf");
+        when(arquivo.getOriginalFilename()).thenReturn("encaminhamento.pdf");
+        when(arquivo.getSize()).thenReturn(1024L);
+        when(fileStorageService.salvar(eq(arquivo), anyString())).thenReturn("uploads/enc.pdf");
+        when(encaminhamentoRepository.save(any(Encaminhamento.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.enviarEncaminhamento(1L, 7L, arquivo);
+
+        ArgumentCaptor<Encaminhamento> captor = ArgumentCaptor.forClass(Encaminhamento.class);
+        verify(encaminhamentoRepository).save(captor.capture());
+        assertSame(solicitacao, captor.getValue().getSolicitacaoMedica());
+    }
+
+    @Test
+    void testEnviarEncaminhamentoComSolicitacaoInexistente() {
+        Medico medico = new Medico("Dr. João", "123456", true);
+        when(medicoRepository.findByIdAndCredenciadoTrue(1L)).thenReturn(Optional.of(medico));
+        when(solicitacaoRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(SolicitacaoNaoEncontradaException.class, () -> service.enviarEncaminhamento(1L, 99L, arquivo));
+        verify(fileStorageService, never()).salvar(any(MultipartFile.class), anyString());
     }
 }

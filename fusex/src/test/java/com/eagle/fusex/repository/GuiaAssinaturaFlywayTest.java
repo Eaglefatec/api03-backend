@@ -3,7 +3,10 @@ package com.eagle.fusex.repository;
 import com.eagle.fusex.model.entity.GuiaAssinatura;
 import com.eagle.fusex.model.entity.Ocs;
 import com.eagle.fusex.model.entity.OcsProcedimento;
+import com.eagle.fusex.model.entity.Medico;
+import com.eagle.fusex.model.entity.Paciente;
 import com.eagle.fusex.model.entity.Procedimento;
+import com.eagle.fusex.model.entity.SolicitacaoMedica;
 import com.eagle.fusex.model.enums.StatusEsteiraAssinatura;
 import org.flywaydb.core.Flyway;
 import org.hibernate.SessionFactory;
@@ -56,7 +59,7 @@ class GuiaAssinaturaFlywayTest {
         strictFlyway.migrate();
 
         assertNotNull(strictFlyway.info().current());
-        assertEquals("23", strictFlyway.info().current().getVersion().getVersion());
+        assertEquals("24", strictFlyway.info().current().getVersion().getVersion());
 
         try (StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
                 .applySetting(AvailableSettings.DATASOURCE, strictDs)
@@ -71,6 +74,9 @@ class GuiaAssinaturaFlywayTest {
                     .addAnnotatedClass(Ocs.class)
                     .addAnnotatedClass(OcsProcedimento.class)
                     .addAnnotatedClass(Procedimento.class)
+                    .addAnnotatedClass(SolicitacaoMedica.class)
+                    .addAnnotatedClass(Medico.class)
+                    .addAnnotatedClass(Paciente.class)
                     .buildMetadata();
 
             assertDoesNotThrow(() -> {
@@ -85,7 +91,7 @@ class GuiaAssinaturaFlywayTest {
     @DisplayName("Deve subir a aplicação com a migration V23, carregar os dados iniciais e salvar nova guia")
     void deveSubirContextoComFlywayV23EPersistirGuia() {
         assertNotNull(flyway.info().current());
-        assertEquals("23", flyway.info().current().getVersion().getVersion());
+        assertEquals("24", flyway.info().current().getVersion().getVersion());
 
         assertTrue(guiaAssinaturaRepository.existsByNumeroGuia("202610700"));
         assertTrue(guiaAssinaturaRepository.existsByNumeroGuia("202610701"));
