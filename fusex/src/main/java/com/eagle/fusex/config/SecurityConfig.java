@@ -114,6 +114,8 @@ public class SecurityConfig {
                                                 .requestMatchers("/auth/**").authenticated()
                                                 .requestMatchers("/solicitacoes/*/pre-guia")
                                                 .hasAnyRole("EG", "MEDICO", "ADMIN")
+                                                .requestMatchers("/pre-guias", "/pre-guias/**")
+                                                .hasAnyRole("EG", "ADMIN")
                                                 .requestMatchers("/solicitacoes/*/guia-pdf",
                                                                 "/solicitacoes/*/guia-pdf/**")
                                                 .hasAnyRole("EG", "ADMIN")

@@ -34,6 +34,10 @@ public class GuiaAssinatura {
     @JoinColumn(name = "ocs_id")
     private Ocs ocs;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "solicitacao_id")
+    private SolicitacaoMedica solicitacaoMedica;
+
     @Column(name = "procedimentos_resumo", columnDefinition = "TEXT")
     private String procedimentosResumo;
 
@@ -157,6 +161,14 @@ public class GuiaAssinatura {
 
     public void setOcs(Ocs ocs) {
         this.ocs = ocs;
+    }
+
+    public SolicitacaoMedica getSolicitacaoMedica() {
+        return solicitacaoMedica;
+    }
+
+    public void setSolicitacaoMedica(SolicitacaoMedica solicitacaoMedica) {
+        this.solicitacaoMedica = solicitacaoMedica;
     }
 
     public String getProcedimentosResumo() {
