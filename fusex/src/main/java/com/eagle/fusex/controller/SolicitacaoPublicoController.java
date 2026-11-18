@@ -2,13 +2,15 @@ package com.eagle.fusex.controller;
 
 import com.eagle.fusex.model.dto.request.PreencherTriagemRequest;
 import com.eagle.fusex.model.dto.response.OcsResponse;
+import com.eagle.fusex.model.dto.response.PreGuiaConsolidadaResponse;
 import com.eagle.fusex.model.dto.response.SolicitacaoPublicaResponse;
 import com.eagle.fusex.model.dto.response.TriagemResponse;
-import com.eagle.fusex.model.entity.SolicitacaoMedica;
 import com.eagle.fusex.service.OcsService;
+import com.eagle.fusex.service.PreGuiaConsolidadaService;
 import com.eagle.fusex.service.QrCodeService;
 import com.eagle.fusex.service.TriagemPreGuiaService;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,13 +30,28 @@ public class SolicitacaoPublicoController {
     private final TriagemPreGuiaService triagemService;
     private final QrCodeService qrCodeService;
     private final OcsService ocsService;
+    private final PreGuiaConsolidadaService preGuiaConsolidadaService;
 
     public SolicitacaoPublicoController(TriagemPreGuiaService triagemService,
                                        QrCodeService qrCodeService,
                                        OcsService ocsService) {
+        this(triagemService, qrCodeService, ocsService, null);
+    }
+
+    @Autowired
+    public SolicitacaoPublicoController(TriagemPreGuiaService triagemService,
+                                       QrCodeService qrCodeService,
+                                       OcsService ocsService,
+                                       PreGuiaConsolidadaService preGuiaConsolidadaService) {
         this.triagemService = triagemService;
         this.qrCodeService = qrCodeService;
         this.ocsService = ocsService;
+        this.preGuiaConsolidadaService = preGuiaConsolidadaService;
+    }
+
+    @GetMapping("/pre-guia")
+    public ResponseEntity<PreGuiaConsolidadaResponse> consultarPreGuiaPublica(@PathVariable String token) {
+        return ResponseEntity.ok(preGuiaConsolidadaService.consultar(token));
     }
 
     @GetMapping

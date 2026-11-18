@@ -17,7 +17,7 @@ class QrCodeServiceTest {
         assertNotNull(bytes);
         assertTrue(bytes.length > 50);
 
-        // Validar magic bytes do formato PNG: \x89 P N G
+        // Confere os primeiros bytes que identificam um arquivo PNG válido
         assertEquals((byte) 0x89, bytes[0]);
         assertEquals((byte) 'P', bytes[1]);
         assertEquals((byte) 'N', bytes[2]);

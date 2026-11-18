@@ -107,7 +107,7 @@ public class GuiaAssinaturaPdfService {
     private String extrairBeneficiario(String texto) {
         if (texto == null || texto.isBlank()) return null;
 
-        // 1. Tenta identificar o nome na linha após 'Titular: (PACIENTE)' presente na guia padrão
+        // Tenta ler o nome no formato da guia padrão ("Titular") e, se não encontrar, busca pelo rótulo genérico ("Beneficiário")
         Matcher m1 = BENEFICIARIO_TITULAR_PATTERN.matcher(texto);
         while (m1.find()) {
             String val = m1.group(1).trim().replaceAll("(?i)[\\s·|-]*(?:prec[\\s-]*cp|ug\\s+origem|cpf).*$", "").trim();
@@ -116,7 +116,6 @@ public class GuiaAssinaturaPdfService {
             }
         }
 
-        // 2. Fallback para padrão genérico 'Beneficiário: ...' descartando o cabeçalho de grupo FUSEX
         Matcher m2 = BENEFICIARIO_GENERICO_PATTERN.matcher(texto);
         while (m2.find()) {
             String val = m2.group(1).trim().replaceAll("(?i)[\\s·|-]*(?:prec[\\s-]*cp|ug\\s+origem|cpf).*$", "").trim();
@@ -230,7 +229,7 @@ public class GuiaAssinaturaPdfService {
             PDRectangle crop = page.getCropBox() != null ? page.getCropBox() : page.getMediaBox();
             float pageHeight = crop != null ? crop.getHeight() : 842f;
 
-            // Localiza dinamicamente as coordenadas exatas dos campos de assinatura na página
+            // Procura na última página onde ficam os campos de assinatura para posicionar as rubricas no lugar certo
             LocalizadorAssinaturasPdf localizador = new LocalizadorAssinaturasPdf(pageHeight);
             int ultimaPagina = document.getNumberOfPages();
             localizador.setStartPage(ultimaPagina);
@@ -273,7 +272,6 @@ public class GuiaAssinaturaPdfService {
         float pageHeight = crop != null ? crop.getHeight() : 842f;
         float pageWidth = crop != null ? crop.getWidth() : 595f;
 
-        // Fallbacks inteligentes proporcionais às dimensões da página caso algum campo não seja localizado
         PosicaoCampoAssinatura posMed = localizador != null && localizador.campoMedico != null
                 ? localizador.campoMedico
                 : PosicaoCampoAssinatura.fallback(pageWidth * 0.12f, pageHeight * 0.15f);
@@ -285,15 +283,12 @@ public class GuiaAssinaturaPdfService {
         float sigW = 150f;
         float sigH = 42f;
 
-        // Centraliza as assinaturas horizontalmente sobre o centro de cada campo/rótulo
         float xMed = (posMed.x + (posMed.largura / 2f)) - (sigW / 2f);
         float xSec = (posSec.x + (posSec.largura / 2f)) - (sigW / 2f);
 
-        // Garante margens seguras na página
         xMed = Math.max(30f, Math.min(xMed, pageWidth - sigW - 30f));
         xSec = Math.max(30f, Math.min(xSec, pageWidth - sigW - 30f));
 
-        // Altura: apoia a imagem imediatamente acima da linha horizontal do campo (a linha fica ~10 a 14pt acima do rótulo)
         float ySigMed = posMed.yBottom + 12f;
         float ySigSec = posSec.yBottom + 12f;
 
@@ -352,7 +347,7 @@ public class GuiaAssinaturaPdfService {
             }
             String norm = normalizarTextoBusca(text);
 
-            // Garante que só busca na metade inferior da página para não confundir com cabeçalhos
+            // Analisa apenas a metade inferior da página para não confundir os campos de assinatura com textos do cabeçalho
             TextPosition first = textPositions.get(0);
             float yBottomEst = pageHeight - first.getYDirAdj();
             if (yBottomEst < pageHeight * 0.65f) {
@@ -403,7 +398,6 @@ public class GuiaAssinaturaPdfService {
                                            PDType1Font fontRegular,
                                            GuiaAssinatura guia,
                                            float sigLineY) throws IOException {
-        // Limpa a área do rodapé antes de desenhar as assinaturas
         cs.setNonStrokingColor(1f, 1f, 1f);
         cs.addRect(45, sigLineY - 50, 505, 115);
         cs.fill();
@@ -459,7 +453,6 @@ public class GuiaAssinaturaPdfService {
                 cs.drawImage(pdImage, x, y, width, height);
                 return;
             } catch (Exception ignored) {
-                // Se não conseguir montar a imagem, usa o texto de assinatura logo abaixo
             }
         }
         if (assinado) {

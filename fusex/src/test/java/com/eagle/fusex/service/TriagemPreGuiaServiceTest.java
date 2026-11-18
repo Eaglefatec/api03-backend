@@ -226,7 +226,6 @@ class TriagemPreGuiaServiceTest {
         when(solicitacaoProcedimentoRepository.findBySolicitacaoMedicaId(1L))
                 .thenReturn(List.of(sp1, sp2));
 
-        // OCS só cobre 1 dos 2 procedimentos
         when(ocsProcedimentoRepository.countByOcs_OcsIdAndProcedimento_ProcCodigoDgpIn(eq(1L), anyCollection()))
                 .thenReturn(1L);
 

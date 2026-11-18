@@ -37,7 +37,7 @@ class ProcedimentoServiceTest {
         Procedimento p1 = new Procedimento("DGP001", "Consulta Ortopédica", 1);
         Procedimento p2 = new Procedimento("DGP002", "Ecocardiograma", 1);
 
-        when(procedimentoRepository.findTop20ByProcDescricaoContainingIgnoreCaseOrderByProcDescricao("Consulta"))
+        when(procedimentoRepository.findTop50ByDescricaoOuCodigo("Consulta"))
                 .thenReturn(List.of(p1));
 
         List<ProcedimentoResponse> resultado = service.listarProcedimentos("Consulta", null);
@@ -46,7 +46,7 @@ class ProcedimentoServiceTest {
         assertEquals(1, resultado.size());
         assertEquals("DGP001", resultado.get(0).procCodigoDgp());
         verify(procedimentoRepository, times(1))
-                .findTop20ByProcDescricaoContainingIgnoreCaseOrderByProcDescricao("Consulta");
+                .findTop50ByDescricaoOuCodigo("Consulta");
     }
 
     @Test

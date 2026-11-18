@@ -53,6 +53,9 @@ public class SolicitacaoMedica {
     @Column(name = "data_importacao_guia")
     private LocalDateTime dataImportacaoGuia;
 
+    @Column(name = "data_confirmacao_emissao")
+    private LocalDateTime dataConfirmacaoEmissao;
+
     @Column(name = "data_validade")
     private LocalDate dataValidade;
 
@@ -169,6 +172,14 @@ public class SolicitacaoMedica {
 
     public void setDataImportacaoGuia(LocalDateTime dataImportacaoGuia) {
         this.dataImportacaoGuia = dataImportacaoGuia;
+    }
+
+    public LocalDateTime getDataConfirmacaoEmissao() {
+        return dataConfirmacaoEmissao;
+    }
+
+    public void setDataConfirmacaoEmissao(LocalDateTime dataConfirmacaoEmissao) {
+        this.dataConfirmacaoEmissao = dataConfirmacaoEmissao;
     }
 
     public LocalDate getDataValidade() {

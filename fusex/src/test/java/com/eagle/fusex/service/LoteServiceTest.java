@@ -5,17 +5,21 @@ import com.eagle.fusex.exception.ResourceNotFoundException;
 import com.eagle.fusex.exception.ValidationException;
 import com.eagle.fusex.model.dto.response.LoteResponse;
 import com.eagle.fusex.model.entity.Guia;
+import com.eagle.fusex.model.entity.GuiaItem;
 import com.eagle.fusex.model.entity.Lote;
 import com.eagle.fusex.model.entity.Ocs;
+import com.eagle.fusex.model.entity.OcsProcedimento;
 import com.eagle.fusex.model.enums.StatusGuia;
 import com.eagle.fusex.repository.GuiaRepository;
 import com.eagle.fusex.repository.GuiaItemRepository;
 import com.eagle.fusex.repository.LoteRepository;
+import com.eagle.fusex.repository.OcsProcedimentoRepository;
 import com.eagle.fusex.repository.OcsRepository;
 import com.eagle.fusex.storage.FileStorageService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.mock.web.MockMultipartFile;
@@ -23,6 +27,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +53,9 @@ class LoteServiceTest {
     @Mock
     private GuiaItemRepository guiaItemRepository;
 
+    @Mock
+    private OcsProcedimentoRepository ocsProcedimentoRepository;
+
     private LoteService service;
     private Ocs ocsLogada;
     private Ocs outraOcs;
@@ -54,7 +63,8 @@ class LoteServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new LoteService(loteRepository, guiaRepository, guiaItemRepository, ocsRepository, fileStorageService);
+        service = new LoteService(loteRepository, guiaRepository, guiaItemRepository, ocsRepository,
+                fileStorageService, ocsProcedimentoRepository);
 
         ocsLogada = new Ocs();
         ocsLogada.setOcsId(1L);
@@ -97,7 +107,7 @@ class LoteServiceTest {
         when(guiaRepository.countByLoteId(10L)).thenReturn(2L);
 
         MockMultipartFile fatura = new MockMultipartFile("fatura", "fatura.pdf", "application/pdf", new byte[]{1});
-        MockMultipartFile espelho = new MockMultipartFile("espelho", "espelho.xlsx", "application/vnd.ms-excel", new byte[]{1});
+        MockMultipartFile espelho = new MockMultipartFile("espelho", "espelho.pdf", "application/pdf", new byte[]{1});
 
         LoteResponse response = service.gerarLote(List.of(1L, 2L), fatura, espelho);
 
@@ -162,5 +172,53 @@ class LoteServiceTest {
         MockMultipartFile espelho = new MockMultipartFile("espelho", "espelho.pdf", "application/pdf", new byte[]{1});
 
         assertThrows(ArquivoInvalidoException.class, () -> service.gerarLote(List.of(1L), fatura, espelho));
+    }
+
+    @Test
+    void testGerarLote_ComEspelhoCsv_PersisteItensECalculaValoresContratadoEFaturado() {
+        when(ocsRepository.findByLoginUsuario("ocs")).thenReturn(Optional.of(ocsLogada));
+        Guia guia = criarGuia(1L, ocsLogada, StatusGuia.SEM_LOTE);
+        when(guiaRepository.findAllById(List.of(1L))).thenReturn(List.of(guia));
+        when(loteRepository.countByOcs_OcsIdAndCompetenciaAnoAndCompetenciaMes(eq(1L), anyInt(), anyInt())).thenReturn(0L);
+        when(fileStorageService.salvar(any(MultipartFile.class), anyString())).thenReturn("uploads/arquivo");
+        when(loteRepository.save(any(Lote.class))).thenAnswer(inv -> {
+            Lote l = inv.getArgument(0);
+            l.setId(20L);
+            return l;
+        });
+        when(guiaRepository.countByLoteId(20L)).thenReturn(1L);
+
+        OcsProcedimento precoTuss = new OcsProcedimento();
+        precoTuss.setValor(new BigDecimal("100.00"));
+        when(ocsProcedimentoRepository.findByOcs_OcsIdAndProcedimento_ProcCodigoDgp(1L, "40301010"))
+                .thenReturn(Optional.of(precoTuss));
+        when(ocsProcedimentoRepository.findByOcs_OcsIdAndProcedimento_ProcCodigoDgp(1L, "99999999"))
+                .thenReturn(Optional.empty());
+
+        String csv = """
+                numero_guia,beneficiario,prec_cp,codigo_tuss,descricao,tipo,quantidade,valor_unitario
+                G-1,Maria Souza,987654,40301010,Hemograma,Procedimento,2,120.00
+                G-1,Maria Souza,987654,99999999,Material Extra,Insumo,1,50.00
+                ,,,
+                """;
+        MockMultipartFile fatura = new MockMultipartFile("fatura", "fatura.pdf", "application/pdf", new byte[]{1});
+        MockMultipartFile espelho = new MockMultipartFile(
+                "espelho", "espelho.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8));
+
+        LoteResponse response = service.gerarLote(List.of(1L), fatura, espelho);
+
+        assertEquals(1L, response.getQuantidadeGuias());
+        assertEquals(StatusGuia.EM_LOTE, guia.getStatus());
+        assertEquals("Maria Souza", guia.getBeneficiarioNome());
+        assertEquals("987654", guia.getBeneficiarioPrecCp());
+        assertEquals(0, new BigDecimal("290.00").compareTo(guia.getValorFaturado()));
+        assertEquals(0, new BigDecimal("200.00").compareTo(guia.getValorContratado()));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<GuiaItem>> itensCaptor = ArgumentCaptor.forClass(List.class);
+        verify(guiaItemRepository).saveAll(itensCaptor.capture());
+        assertEquals(2, itensCaptor.getValue().size());
+        assertEquals("40301010", itensCaptor.getValue().get(0).getCodigoTuss());
+        assertEquals("Insumo", itensCaptor.getValue().get(1).getTipo());
     }
 }

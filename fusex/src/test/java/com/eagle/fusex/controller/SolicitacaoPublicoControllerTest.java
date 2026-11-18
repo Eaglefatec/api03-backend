@@ -2,9 +2,11 @@ package com.eagle.fusex.controller;
 
 import com.eagle.fusex.exception.SolicitacaoNaoEncontradaException;
 import com.eagle.fusex.model.dto.request.PreencherTriagemRequest;
+import com.eagle.fusex.model.dto.response.PreGuiaConsolidadaResponse;
 import com.eagle.fusex.model.dto.response.SolicitacaoPublicaResponse;
 import com.eagle.fusex.model.dto.response.TriagemResponse;
 import com.eagle.fusex.model.enums.Especialidade;
+import com.eagle.fusex.service.PreGuiaConsolidadaService;
 import com.eagle.fusex.service.TriagemPreGuiaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +41,26 @@ class SolicitacaoPublicoControllerTest {
 
     @MockitoBean
     private TriagemPreGuiaService triagemPreGuiaService;
+
+    @MockitoBean
+    private PreGuiaConsolidadaService preGuiaConsolidadaService;
+
+    @Test
+    @DisplayName("GET /solicitacoes/publico/{token}/pre-guia - Deve retornar pré-guia consolidada sem autenticação")
+    void deveConsultarPreGuiaPublicaPorTokenSemAutenticacao() throws Exception {
+        PreGuiaConsolidadaResponse response = new PreGuiaConsolidadaResponse();
+        response.setBeneficiario(new PreGuiaConsolidadaResponse.Beneficiario(
+                "Carlos Oliveira", 45, "12345678900", "998877", "carlos@email.com", "11999998888"));
+
+        when(preGuiaConsolidadaService.consultar("token-valido-123")).thenReturn(response);
+
+        mockMvc.perform(get("/solicitacoes/publico/token-valido-123/pre-guia")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.beneficiario.nome").value("Carlos Oliveira"))
+                .andExpect(jsonPath("$.beneficiario.cpf").value("12345678900"))
+                .andExpect(jsonPath("$.beneficiario.prec").value("998877"));
+    }
 
     @Test
     @DisplayName("GET /solicitacoes/publico/{token} - Deve retornar 200 OK sem necessidade de autenticação")
@@ -96,7 +118,6 @@ class SolicitacaoPublicoControllerTest {
     @DisplayName("POST /solicitacoes/publico/{token}/triagem - Deve retornar 400 BAD_REQUEST quando dados forem inválidos")
     void deveRetornar400QuandoDadosInvalidos() throws Exception {
         PreencherTriagemRequest request = new PreencherTriagemRequest();
-        // Campos obrigatórios ausentes propositalmente
 
         mockMvc.perform(post("/solicitacoes/publico/token-valido-123/triagem")
                         .contentType(MediaType.APPLICATION_JSON)

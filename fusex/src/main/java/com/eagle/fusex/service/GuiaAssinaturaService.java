@@ -16,6 +16,7 @@ import com.eagle.fusex.model.dto.response.ProcedimentoGuiaDTO;
 import com.eagle.fusex.model.entity.GuiaAssinatura;
 import com.eagle.fusex.model.entity.Ocs;
 import com.eagle.fusex.model.entity.Paciente;
+import com.eagle.fusex.model.entity.SolicitacaoMedica;
 import com.eagle.fusex.model.enums.DecisaoAssinatura;
 import com.eagle.fusex.model.enums.StatusEmail;
 import com.eagle.fusex.model.enums.StatusEsteiraAssinatura;
@@ -96,8 +97,18 @@ public class GuiaAssinaturaService {
         return enviarGuiaParaAssinatura(arquivo, null);
     }
 
+    public record DadosPreGuia(SolicitacaoMedica solicitacao, String beneficiarioNome, String beneficiarioPrec,
+                               String beneficiarioEmail, String ocsNome) {
+    }
+
     @Transactional
     public GuiaAssinaturaResponse enviarGuiaParaAssinatura(MultipartFile arquivo, CadastroPacienteConfirmacaoDTO confirmacao) {
+        return enviarGuiaParaAssinatura(arquivo, confirmacao, null);
+    }
+
+    @Transactional
+    public GuiaAssinaturaResponse enviarGuiaParaAssinatura(MultipartFile arquivo, CadastroPacienteConfirmacaoDTO confirmacao,
+                                                          DadosPreGuia preGuia) {
         validarArquivoPdf5Mb(arquivo);
 
         byte[] bytesPdf;
@@ -131,7 +142,6 @@ public class GuiaAssinaturaService {
         String beneficiarioEmail = extraidos.beneficiarioEmail();
         String ocsNome = extraidos.ocsNome();
 
-        // Completa os dados com o cadastro existente no banco, quando houver
         var solOpt = solicitacaoRepository.findByNumeroGuia(numeroGuia);
         if (solOpt.isPresent() && solOpt.get().getPaciente() != null) {
             Paciente pacSol = solOpt.get().getPaciente();
@@ -141,24 +151,30 @@ public class GuiaAssinaturaService {
             if (beneficiarioEmail == null || beneficiarioEmail.isBlank()) beneficiarioEmail = pacSol.getEmail();
         }
 
-        // Busca o beneficiário no banco de dados (tabela paciente) por Prec CP ou por Nome
         Paciente pacienteCadastrado = null;
-        if (beneficiarioPrec != null && !beneficiarioPrec.isBlank()) {
+        if (preGuia != null) {
+            beneficiarioNome = preGuia.beneficiarioNome();
+            beneficiarioPrec = preGuia.beneficiarioPrec();
+            beneficiarioEmail = preGuia.beneficiarioEmail();
+            ocsNome = preGuia.ocsNome();
+            pacienteCadastrado = preGuia.solicitacao().getPaciente();
+        }
+        if (pacienteCadastrado == null && beneficiarioPrec != null && !beneficiarioPrec.isBlank()) {
             pacienteCadastrado = pacienteRepository.findByCpfPrec(beneficiarioPrec).orElse(null);
         }
         if (pacienteCadastrado == null && beneficiarioNome != null && !beneficiarioNome.isBlank()) {
             pacienteCadastrado = localizarPacientePorNome(beneficiarioNome);
         }
 
-        // Se encontrado no banco, utiliza os dados oficiais cadastrados (especialmente o e-mail)
         if (pacienteCadastrado != null) {
             beneficiarioNome = pacienteCadastrado.getNome();
             if (beneficiarioPrec == null || beneficiarioPrec.isBlank()) {
                 beneficiarioPrec = pacienteCadastrado.getPrec();
             }
-            beneficiarioEmail = pacienteCadastrado.getEmail();
+            if (pacienteCadastrado.getEmail() != null && !pacienteCadastrado.getEmail().isBlank()) {
+                beneficiarioEmail = pacienteCadastrado.getEmail();
+            }
         } else if (confirmacao != null && confirmacao.confirmarCadastro()) {
-            // Operador confirmou o cadastro do paciente via modal de inclusão com e-mail preenchido
             String nomeFinal = (confirmacao.nome() != null && !confirmacao.nome().isBlank())
                     ? confirmacao.nome().trim()
                     : (beneficiarioNome != null ? beneficiarioNome : fallback[0]);
@@ -211,8 +227,7 @@ public class GuiaAssinaturaService {
             beneficiarioPrec = pacienteCadastrado.getPrec();
             beneficiarioEmail = pacienteCadastrado.getEmail();
         } else {
-            // Beneficiário não localizado no banco e ainda não confirmado pelo operador:
-            // Interrompe o processo e solicita confirmação e preenchimento dos dados no modal
+            // Se o beneficiário ainda não estiver cadastrado, pede confirmação na tela antes de concluir o envio da guia
             String nomeDescricao = beneficiarioNome != null ? beneficiarioNome : "Não identificado no PDF";
             String precDescricao = beneficiarioPrec != null ? beneficiarioPrec : "Não identificado";
             throw new PacienteNaoEncontradoException(
@@ -248,6 +263,7 @@ public class GuiaAssinaturaService {
         guia.setBeneficiarioEmail(beneficiarioEmail);
         guia.setOcsNome(ocsNome);
         guia.setOcs(ocsEntidade);
+        guia.setSolicitacaoMedica(preGuia != null ? preGuia.solicitacao() : null);
         guia.setProcedimentosResumo(pdfService.serializarProcedimentos(extraidos.procedimentos()));
         guia.setNomeArquivoOriginal(nomeOriginal);
         guia.setCaminhoArquivoOriginal(caminhoSalvo);
@@ -394,7 +410,6 @@ public class GuiaAssinaturaService {
             estamparESalvarPdf(guia, procedimentos);
             guia = guiaAssinaturaRepository.save(guia);
 
-            // Atualiza a validade na solicitação médica vinculada, se existir
             solicitacaoRepository.findByNumeroGuia(guia.getNumeroGuia()).ifPresent(sol -> {
                 sol.setDataValidade(validade);
                 solicitacaoRepository.save(sol);
@@ -590,7 +605,7 @@ public class GuiaAssinaturaService {
         if (bytes == null || bytes.length < 4) {
             return false;
         }
-        // Confere o cabeçalho do arquivo para aceitar PNG, JPEG ou WebP
+        // Verifica pelos primeiros bytes do arquivo se a imagem é realmente PNG, JPEG ou WebP
         boolean ehPng = bytes.length >= 8
                 && (bytes[0] & 0xFF) == 0x89
                 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G';

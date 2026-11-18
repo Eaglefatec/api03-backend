@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -54,12 +55,12 @@ class EncaminhamentoControllerTest {
 
         EncaminhamentoResponse response = new EncaminhamentoResponse(1L, LocalDateTime.now(), "Encaminhamento realizado com sucesso");
 
-        when(encaminhamentoService.enviarEncaminhamento(eq(1L), any())).thenReturn(response);
+        when(encaminhamentoService.enviarEncaminhamento(eq(1L), isNull(), any())).thenReturn(response);
 
         mockMvc.perform(multipart("/encaminhamentos")
                         .file(arquivo)
                         .param("medicoId", "1")
-                        .with(httpBasic("medico", "senha123")))
+                        .with(httpBasic("medico@gmail.com", "senha123")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.mensagem").value("Encaminhamento realizado com sucesso"));
@@ -72,13 +73,13 @@ class EncaminhamentoControllerTest {
                 "arquivo", "arquivo.exe", "application/x-msdownload", "conteudo".getBytes()
         );
 
-        when(encaminhamentoService.enviarEncaminhamento(eq(1L), any()))
+        when(encaminhamentoService.enviarEncaminhamento(eq(1L), isNull(), any()))
                 .thenThrow(new ArquivoInvalidoException("Extensão de arquivo não permitida. Apenas PDF, PNG e JPG são aceitos."));
 
         mockMvc.perform(multipart("/encaminhamentos")
                         .file(arquivo)
                         .param("medicoId", "1")
-                        .with(httpBasic("medico", "senha123")))
+                        .with(httpBasic("medico@gmail.com", "senha123")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Extensão de arquivo não permitida. Apenas PDF, PNG e JPG são aceitos."));

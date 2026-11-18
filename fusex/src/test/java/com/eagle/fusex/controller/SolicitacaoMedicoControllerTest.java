@@ -79,7 +79,7 @@ class SolicitacaoMedicoControllerTest {
         when(solicitacaoMedicaService.criar(any(CriarSolicitacaoRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/solicitacoes")
-                        .with(httpBasic("medico", "senha123"))
+                        .with(httpBasic("medico@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -92,10 +92,9 @@ class SolicitacaoMedicoControllerTest {
     @DisplayName("POST /solicitacoes - Deve retornar 400 BAD REQUEST quando validação de DTO falhar")
     void deveRetornar400QuandoValidacaoFalhar() throws Exception {
         CriarSolicitacaoRequest request = new CriarSolicitacaoRequest();
-        // Campos obrigatórios vazios
 
         mockMvc.perform(post("/solicitacoes")
-                        .with(httpBasic("medico", "senha123"))
+                        .with(httpBasic("medico@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -120,7 +119,7 @@ class SolicitacaoMedicoControllerTest {
         when(preGuiaConsolidadaService.consultar("token-123")).thenReturn(response);
 
         mockMvc.perform(get("/solicitacoes/token-123/pre-guia")
-                        .with(httpBasic("medico", "senha123")))
+                        .with(httpBasic("medico@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.beneficiario.nome").value("João Silva"))
                 .andExpect(jsonPath("$.beneficiario.cpf").value("12345678901"));

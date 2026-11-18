@@ -115,6 +115,8 @@ class GuiaAssinaturaServiceTest {
         byte[] pdfBytes = gerarPdfGuiaValido("202610888", "Carlos Eduardo Rocha", "34911223344", "Hospital Policlin S/A");
         MockMultipartFile arquivo = new MockMultipartFile("arquivo", "guia_202610888.pdf", "application/pdf", pdfBytes);
 
+        when(pacienteRepository.findByCpfPrec("34911223344")).thenReturn(Optional.of(
+                new com.eagle.fusex.model.entity.Paciente("Carlos Eduardo Rocha", "34911223344", "34911223344", "FUSEX", "carlos@email.com.br")));
         when(guiaAssinaturaRepository.existsByNumeroGuia("202610888")).thenReturn(false);
         when(fileStorageService.salvar(any(byte[].class), anyString())).thenReturn("uploads/guia_202610888.pdf");
         when(guiaAssinaturaRepository.save(any(GuiaAssinatura.class))).thenAnswer(inv -> {
@@ -260,7 +262,6 @@ class GuiaAssinaturaServiceTest {
         Authentication authSec = new UsernamePasswordAuthenticationToken(
                 "chefesecao", "senha123", List.of(new SimpleGrantedAuthority("ROLE_CHEFE_SECAO")));
 
-        // Chefe da Seção não pode assinar antes do Médico Chefe
         DecisaoAssinaturaRequest reqSecPrecoce = new DecisaoAssinaturaRequest(
                 DecisaoAssinatura.APROVAR, "sec", true, ASSINATURA_PNG_BASE64, null);
         assertThrows(UnauthorizedOperationException.class, () -> service.processarDecisao(1L, reqSecPrecoce, authSec));
@@ -436,6 +437,8 @@ class GuiaAssinaturaServiceTest {
         byte[] pdfComBarra = gerarPdfGuiaValido("2026/10788", "Maj. Felipe Prado", "34123456789", "Hospital Policlin S/A");
         MockMultipartFile arqBarra = new MockMultipartFile("arquivo", "C:\\fakepath\\guia.pdf", "application/pdf", pdfComBarra);
 
+        when(pacienteRepository.findByCpfPrec("34123456789")).thenReturn(Optional.of(
+                new com.eagle.fusex.model.entity.Paciente("Maj. Felipe Prado", "34123456789", "34123456789", "FUSEX", "felipe@email.com.br")));
         when(guiaAssinaturaRepository.existsByNumeroGuia("2026/10788")).thenReturn(false);
         when(fileStorageService.salvar(any(byte[].class), argThat(nome -> !nome.contains("/") && !nome.contains("\\") && nome.startsWith("guia_assinatura_2026_10788_"))))
                 .thenReturn("uploads/guia_assinatura_2026_10788.pdf");

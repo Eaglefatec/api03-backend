@@ -50,8 +50,14 @@ public class SolicitacaoEmailService {
         String link = qrCodeService.obterLinkPublicoBeneficiario(solicitacao.getTokenPublico());
         byte[] qrCodeBytes = qrCodeService.gerarQrCodePngPorToken(solicitacao.getTokenPublico());
 
+        if (!mailEnabled) {
+            log.info("[SIMULAÇÃO DE E-MAIL FUSEX] E-mail para: {} | Link: {} | Token: {}",
+                    destinatario, link, solicitacao.getTokenPublico());
+            return ResultadoEnvioEmail.simulado(destinatario);
+        }
+
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
-        if (!mailEnabled || mailSender == null) {
+        if (mailSender == null) {
             log.info("[SIMULAÇÃO DE E-MAIL FUSEX] E-mail para: {} | Link: {} | Token: {}",
                     destinatario, link, solicitacao.getTokenPublico());
             return ResultadoEnvioEmail.simulado(destinatario);

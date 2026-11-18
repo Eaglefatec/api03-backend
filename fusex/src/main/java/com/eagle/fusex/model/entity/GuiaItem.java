@@ -22,7 +22,7 @@ public class GuiaItem {
     private String descricaoItem;
 
     @Column(nullable = false, length = 50)
-    private String tipo; // 'Procedimento' ou 'Insumo'
+    private String tipo; // Indica se o item é "Procedimento" ou "Insumo"
 
     @Column(nullable = false)
     private Integer quantidade = 1;
@@ -33,7 +33,6 @@ public class GuiaItem {
     @Column(name = "data_item")
     private LocalDate dataItem;
 
-    // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

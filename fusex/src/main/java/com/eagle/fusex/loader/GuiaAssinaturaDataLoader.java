@@ -112,7 +112,7 @@ public class GuiaAssinaturaDataLoader implements CommandLineRunner {
 
             guiaAssinaturaRepository.saveAll(List.of(g1, g2, g3, g4, g5));
 
-            // Deixa um PDF pronto na pasta uploads para facilitar testes de envio
+            // Gera um PDF de exemplo na pasta de uploads para facilitar testes manuais de envio
             GuiaAssinatura modeloUploadTeste = new GuiaAssinatura();
             modeloUploadTeste.setNumeroGuia("202610710");
             modeloUploadTeste.setBeneficiarioNome("Cap. André L. Cavalcante");
@@ -153,12 +153,12 @@ public class GuiaAssinaturaDataLoader implements CommandLineRunner {
         g.setCreatedAt(dataEnvio);
 
         if (dataMed != null) {
-            g.setMedicoChefeUsuario("medicochefe");
+            g.setMedicoChefeUsuario("chefemedico@gmail.com");
             g.setDataAssinaturaMedico(dataMed);
             g.setAssinaturaMedicoBase64("ASSINADO_MEDICO_CHEFE");
         }
         if (dataSec != null) {
-            g.setChefeSecaoUsuario("chefesecao");
+            g.setChefeSecaoUsuario("chefesessao@gmail.com");
             g.setDataAssinaturaSecao(dataSec);
             g.setAssinaturaSecaoBase64("ASSINADO_CHEFE_SECAO");
             LocalDate validade = dataSec.toLocalDate().plusDays(60);
