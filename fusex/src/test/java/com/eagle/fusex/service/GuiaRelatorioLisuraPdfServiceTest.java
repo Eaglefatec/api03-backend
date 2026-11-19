@@ -6,9 +6,11 @@ import com.eagle.fusex.model.entity.Glosa;
 import com.eagle.fusex.model.entity.Guia;
 import com.eagle.fusex.model.entity.GuiaItem;
 import com.eagle.fusex.model.entity.Ocs;
+import com.eagle.fusex.model.entity.Paciente;
 import com.eagle.fusex.repository.GlosaRepository;
 import com.eagle.fusex.repository.GuiaItemRepository;
 import com.eagle.fusex.repository.GuiaRepository;
+import com.eagle.fusex.repository.PacienteRepository;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -39,6 +41,7 @@ class GuiaRelatorioLisuraPdfServiceTest {
     @Mock private GuiaRepository guiaRepository;
     @Mock private GlosaRepository glosaRepository;
     @Mock private GuiaItemRepository guiaItemRepository;
+    @Mock private PacienteRepository pacienteRepository;
 
     private GuiaRelatorioLisuraPdfService service;
     private Guia guia;
@@ -46,7 +49,7 @@ class GuiaRelatorioLisuraPdfServiceTest {
     @BeforeEach
     void setUp() throws IOException {
         MockitoAnnotations.openMocks(this);
-        service = new GuiaRelatorioLisuraPdfService(guiaRepository, glosaRepository, guiaItemRepository);
+        service = new GuiaRelatorioLisuraPdfService(guiaRepository, glosaRepository, guiaItemRepository, pacienteRepository);
 
         Path arquivo = pasta.resolve("guia.pdf");
         try (PDDocument original = new PDDocument()) {
@@ -104,8 +107,9 @@ class GuiaRelatorioLisuraPdfServiceTest {
         assertEquals("application/pdf", arquivo.tipo());
         assertEquals(2, paginas(arquivo.conteudo()));
         String verso = textoDaPagina(arquivo.conteudo(), 2);
-        assertTrue(verso.contains("Guia Nº 202610700"));
-        assertTrue(verso.contains("GLOSADA"));
+        assertTrue(verso.contains("Relatório de Lisura"));
+        assertTrue(verso.contains("Verso da guia nº 202610700"));
+        assertTrue(verso.contains("Glosa 1"));
         assertTrue(verso.contains("Valor acima da tabela contratada"));
         assertTrue(verso.contains("Glosa parcial aplicada"));
         assertTrue(verso.contains("admin@gmail.com"));
@@ -115,8 +119,8 @@ class GuiaRelatorioLisuraPdfServiceTest {
     void testGerar_SemGlosa_InformaQueNaoHouveObservacao() throws IOException {
         String verso = textoDaPagina(service.gerarGuiaComRelatorio(20L).conteudo(), 2);
 
-        assertTrue(verso.contains("Nenhuma glosa ou observação registrada"));
-        assertTrue(verso.contains("DIVERGENTE"));
+        assertTrue(verso.contains("Nenhuma glosa registrada"));
+        assertTrue(verso.contains("Divergência de R$ 50,00"));
     }
 
     @Test
@@ -131,7 +135,8 @@ class GuiaRelatorioLisuraPdfServiceTest {
 
         String verso = textoDaPagina(service.gerarGuiaComRelatorio(20L).conteudo(), 2);
 
-        assertTrue(verso.contains("CONFERIDA"));
+        assertTrue(verso.contains("Sem divergência"));
+        assertTrue(verso.contains("Valores conferidos. Nenhuma glosa registrada."));
         assertTrue(verso.contains("Consulta eletiva"));
     }
 
@@ -160,5 +165,15 @@ class GuiaRelatorioLisuraPdfServiceTest {
         when(guiaRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.gerarGuiaComRelatorio(99L));
+    }
+
+    @Test
+    void testGerar_SemNomeNaGuia_BuscaBeneficiarioPeloPrec() throws IOException {
+        guia.setBeneficiarioNome(null);
+        Paciente paciente = new Paciente();
+        paciente.setNome("ROSANA TICIANELLI PINTO");
+        when(pacienteRepository.findByPrec("33333333333")).thenReturn(Optional.of(paciente));
+
+        assertTrue(textoDaPagina(service.gerarGuiaComRelatorio(20L).conteudo(), 2).contains("ROSANA TICIANELLI PINTO"));
     }
 }
