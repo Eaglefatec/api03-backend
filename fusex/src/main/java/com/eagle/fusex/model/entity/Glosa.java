@@ -28,6 +28,12 @@ public class Glosa {
     @Column(name = "data_registro", nullable = false)
     private LocalDateTime dataRegistro = LocalDateTime.now();
 
+    @Column(columnDefinition = "TEXT")
+    private String conclusao;
+
+    @Column(length = 255)
+    private String auditor;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -45,4 +51,10 @@ public class Glosa {
 
     public LocalDateTime getDataRegistro() { return dataRegistro; }
     public void setDataRegistro(LocalDateTime dataRegistro) { this.dataRegistro = dataRegistro; }
+
+    public String getConclusao() { return conclusao; }
+    public void setConclusao(String conclusao) { this.conclusao = conclusao; }
+
+    public String getAuditor() { return auditor; }
+    public void setAuditor(String auditor) { this.auditor = auditor; }
 }

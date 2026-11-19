@@ -16,6 +16,8 @@ public class GlosaRequest {
     @NotNull(message = "O valor da glosa é obrigatório")
     private BigDecimal valorGlosa;
 
+    private String conclusao;
+
     public Long getGuiaId() { return guiaId; }
     public void setGuiaId(Long guiaId) { this.guiaId = guiaId; }
 
@@ -27,4 +29,7 @@ public class GlosaRequest {
 
     public BigDecimal getValorGlosa() { return valorGlosa; }
     public void setValorGlosa(BigDecimal valorGlosa) { this.valorGlosa = valorGlosa; }
+
+    public String getConclusao() { return conclusao; }
+    public void setConclusao(String conclusao) { this.conclusao = conclusao; }
 }
