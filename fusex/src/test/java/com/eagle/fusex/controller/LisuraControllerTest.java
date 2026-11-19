@@ -1,9 +1,11 @@
 package com.eagle.fusex.controller;
 
+import com.eagle.fusex.model.dto.response.ArquivoLoteDownload;
 import com.eagle.fusex.model.dto.response.DivergenciaResponse;
 import com.eagle.fusex.model.dto.response.FaturamentoLoteResponse;
 import com.eagle.fusex.model.entity.GuiaItem;
 import com.eagle.fusex.model.enums.StatusLote;
+import com.eagle.fusex.service.GuiaRelatorioLisuraPdfService;
 import com.eagle.fusex.service.LisuraService;
 import com.eagle.fusex.service.RelatorioDivergenciaPdfService;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +29,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -42,6 +45,9 @@ class LisuraControllerTest {
 
     @MockitoBean
     private RelatorioDivergenciaPdfService relatorioDivergenciaPdfService;
+
+    @MockitoBean
+    private GuiaRelatorioLisuraPdfService guiaRelatorioLisuraPdfService;
 
     @Test
     @DisplayName("GET /lisura/fechamentos - Deve exigir autenticação (401) e restringir à role ADMIN (403)")
@@ -149,5 +155,22 @@ class LisuraControllerTest {
                         .with(httpBasic("admin@gmail.com", "admin123")))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+    }
+
+    @Test
+    @DisplayName("GET /lisura/guias/{id}/pdf-relatorio - Deve abrir a guia com o relatório no verso somente para ADMIN")
+    void deveAbrirGuiaComRelatorioNoVerso() throws Exception {
+        when(guiaRelatorioLisuraPdfService.gerarGuiaComRelatorio(20L))
+                .thenReturn(new ArquivoLoteDownload(new byte[]{37, 80, 68, 70}, "guia_202610700_relatorio_lisura.pdf", "application/pdf"));
+
+        mockMvc.perform(get("/lisura/guias/20/pdf-relatorio")
+                        .with(httpBasic("ocs@gmail.com", "senha123")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/lisura/guias/20/pdf-relatorio")
+                        .with(httpBasic("admin@gmail.com", "admin123")))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.startsWith("inline")));
     }
 }
