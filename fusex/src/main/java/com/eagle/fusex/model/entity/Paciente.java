@@ -53,7 +53,6 @@ public class Paciente {
         this.telefone = telefone;
     }
 
-    // Construtores de compatibilidade com versões e testes legados
     public Paciente(String nome, String cpfPrec, String om) {
         this(nome, cpfPrec, cpfPrec, om, "paciente@fusex.eb.mil.br");
     }
@@ -145,13 +144,11 @@ public class Paciente {
         this.createdAt = createdAt;
     }
 
-    /**
-     * Helper de compatibilidade para exibição combinada
-     */
+    // Retorna CPF e PREC juntos, sem repetir quando ambos tiverem o mesmo valor
     public String getCpfPrec() {
         if (cpf == null && prec == null) return null;
-        if (cpf != null && prec != null) return cpf + " / " + prec;
-        return cpf != null ? cpf : prec;
+        if (cpf != null && prec != null && !cpf.equals(prec) && !prec.isBlank()) return cpf + " / " + prec;
+        return (cpf != null && !cpf.isBlank()) ? cpf : prec;
     }
 
     @Override

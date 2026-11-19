@@ -13,7 +13,6 @@ public class DivergenciaResponse {
     private BigDecimal diferenca;
     private String statusDivergencia;
 
-    // Construtor atualizado
     public DivergenciaResponse(Long guiaId, String numeroGuia, String codigoTuss, String beneficiarioNome, String beneficiarioPrecCp, BigDecimal valorFaturado, BigDecimal valorContratado, BigDecimal diferenca, String statusDivergencia) {
         this.guiaId = guiaId;
         this.numeroGuia = numeroGuia;
@@ -26,7 +25,6 @@ public class DivergenciaResponse {
         this.statusDivergencia = statusDivergencia;
     }
 
-    // Getters
     public Long getGuiaId() { return guiaId; }
     public String getNumeroGuia() { return numeroGuia; }
     public String getCodigoTuss() { return codigoTuss; }

@@ -9,10 +9,12 @@ import com.eagle.fusex.model.entity.Guia;
 import com.eagle.fusex.model.entity.GuiaItem;
 import com.eagle.fusex.model.entity.Lote;
 import com.eagle.fusex.model.entity.Ocs;
+import com.eagle.fusex.model.entity.OcsProcedimento;
 import com.eagle.fusex.model.enums.StatusGuia;
 import com.eagle.fusex.repository.GuiaItemRepository;
 import com.eagle.fusex.repository.GuiaRepository;
 import com.eagle.fusex.repository.LoteRepository;
+import com.eagle.fusex.repository.OcsProcedimentoRepository;
 import com.eagle.fusex.repository.OcsRepository;
 import com.eagle.fusex.security.SecurityUtils;
 import com.eagle.fusex.storage.FileStorageService;
@@ -21,6 +23,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.poi.ss.usermodel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -48,15 +51,25 @@ public class LoteService {
     private final GuiaItemRepository guiaItemRepository;
     private final OcsRepository ocsRepository;
     private final FileStorageService fileStorageService;
+    private final OcsProcedimentoRepository ocsProcedimentoRepository;
 
     public LoteService(LoteRepository loteRepository, GuiaRepository guiaRepository,
                        GuiaItemRepository guiaItemRepository, OcsRepository ocsRepository,
                        FileStorageService fileStorageService) {
+        this(loteRepository, guiaRepository, guiaItemRepository, ocsRepository, fileStorageService, null);
+    }
+
+    @Autowired
+    public LoteService(LoteRepository loteRepository, GuiaRepository guiaRepository,
+                       GuiaItemRepository guiaItemRepository, OcsRepository ocsRepository,
+                       FileStorageService fileStorageService,
+                       OcsProcedimentoRepository ocsProcedimentoRepository) {
         this.loteRepository = loteRepository;
         this.guiaRepository = guiaRepository;
         this.guiaItemRepository = guiaItemRepository;
         this.ocsRepository = ocsRepository;
         this.fileStorageService = fileStorageService;
+        this.ocsProcedimentoRepository = ocsProcedimentoRepository;
     }
 
     @Transactional
@@ -107,11 +120,9 @@ public class LoteService {
 
         Lote salvo = loteRepository.save(lote);
 
-        // Mapeia as guias por número para associar os itens e atualizar os dados da guia por linha da planilha
         Map<String, Guia> guiasPorNumero = guias.stream()
                 .collect(Collectors.toMap(Guia::getNumeroGuia, g -> g, (g1, g2) -> g1));
 
-        // Processa o espelho (Excel/CSV), grava os itens e atualiza as guias
         processarEspelhoImportado(espelho, guiasPorNumero);
 
         guias.forEach(guia -> {
@@ -181,8 +192,6 @@ public class LoteService {
         return nome.substring(nome.lastIndexOf(".") + 1).toLowerCase();
     }
 
-    // --- LEITURA, PERSISTÊNCIA DOS ITENS E ATUALIZAÇÃO DA GUIA ---
-
     private void processarEspelhoImportado(MultipartFile espelho, Map<String, Guia> guiasPorNumero) {
         String nome = espelho.getOriginalFilename();
         if (nome == null) return;
@@ -210,19 +219,19 @@ public class LoteService {
             log.info("Total de linhas no Excel do espelho: {}", sheet.getLastRowNum());
 
             for (Row row : sheet) {
-                if (row.getRowNum() == 0) continue; // Pula o cabeçalho
+                if (row.getRowNum() == 0) continue;
 
-                // Mapeamento exato com base nas colunas da imagem do espelho:
-                String numeroGuia = getCellVal(row.getCell(0)); // Coluna 0: Nº da Guia
-                String beneficiarioNome = getCellVal(row.getCell(1)); // Coluna 1: Beneficiário
-                String precCp = getCellVal(row.getCell(2)); // Coluna 2: Prec CP
-                String codigoTuss = getCellVal(row.getCell(3)); // Coluna 3: Código TUSS
-                String descricao = getCellVal(row.getCell(4)); // Coluna 4: Descrição
-                String tipo = getCellVal(row.getCell(5));       // Coluna 5: Tipo
+                // Ordem das colunas na planilha do espelho: Nº da Guia, Beneficiário, Prec CP, Código TUSS, Descrição, Tipo, Quantidade e Valor Unitário
+                String numeroGuia = getCellVal(row.getCell(0));
+                String beneficiarioNome = getCellVal(row.getCell(1));
+                String precCp = getCellVal(row.getCell(2));
+                String codigoTuss = getCellVal(row.getCell(3));
+                String descricao = getCellVal(row.getCell(4));
+                String tipo = getCellVal(row.getCell(5));
 
                 int quantidade = 1;
                 try {
-                    Cell cellQtd = row.getCell(6); // Coluna 6: Qtd
+                    Cell cellQtd = row.getCell(6);
                     if (cellQtd != null) {
                         quantidade = (int) cellQtd.getNumericCellValue();
                     }
@@ -230,7 +239,7 @@ public class LoteService {
 
                 BigDecimal valorUnitario = BigDecimal.ZERO;
                 try {
-                    Cell cellVal = row.getCell(7); // Coluna 7: Valor Unit. (R$)
+                    Cell cellVal = row.getCell(7);
                     if (cellVal != null) {
                         valorUnitario = BigDecimal.valueOf(cellVal.getNumericCellValue());
                     }
@@ -238,31 +247,11 @@ public class LoteService {
 
                 if (!numeroGuia.isEmpty() && guiasPorNumero.containsKey(numeroGuia)) {
                     Guia guia = guiasPorNumero.get(numeroGuia);
-
-                    // Atualiza os dados da entidade Guia com as informações da planilha
-                    if (!beneficiarioNome.isEmpty()) guia.setBeneficiarioNome(beneficiarioNome);
-                    if (!precCp.isEmpty()) guia.setBeneficiarioPrecCp(precCp);
-                    if (!codigoTuss.isEmpty()) guia.setCodigoTuss(codigoTuss);
-
-                    // Calcula o valor faturado da guia com base no item ou acumula se houver múltiplos itens
-                    BigDecimal valorTotalItem = valorUnitario.multiply(BigDecimal.valueOf(quantidade));
-                    guia.setValorFaturado(guia.getValorFaturado().add(valorTotalItem));
-
-                    if (!guiasParaAtualizar.contains(guia)) {
-                        guiasParaAtualizar.add(guia);
-                    }
-
-                    // Cria e adiciona o item da guia
-                    GuiaItem item = new GuiaItem();
-                    item.setGuiaId(guia.getId());
-                    item.setCodigoTuss(codigoTuss);
-                    item.setDescricaoItem(descricao.isEmpty() ? "Item sem descrição" : descricao);
-                    item.setTipo(tipo.isEmpty() ? "Procedimento" : tipo);
-                    item.setQuantidade(quantidade > 0 ? quantidade : 1);
-                    item.setValorUnitario(valorUnitario);
-                    item.setDataItem(LocalDate.now());
-
-                    itensParaSalvar.add(item);
+                    registrarItemNaGuia(guia, beneficiarioNome, precCp, codigoTuss,
+                            descricao.isEmpty() ? "Item sem descrição" : descricao,
+                            tipo.isEmpty() ? "Procedimento" : tipo,
+                            quantidade > 0 ? quantidade : 1, valorUnitario,
+                            guiasParaAtualizar, itensParaSalvar);
                 } else {
                     log.warn("Linha do Excel com Guia '{}' ignorada ou não encontrada nas guias selecionadas.", numeroGuia);
                 }
@@ -285,45 +274,34 @@ public class LoteService {
         List<Guia> guiasParaAtualizar = new ArrayList<>();
 
         try (Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
-            Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(reader);
+            Iterable<CSVRecord> records = CSVFormat.DEFAULT.builder()
+                    .setHeader()
+                    .setSkipHeaderRecord(true)
+                    .build()
+                    .parse(reader);
             for (CSVRecord record : records) {
-                String numeroGuia = record.get(0);
-                String beneficiarioNome = record.get(1);
-                String precCp = record.get(2);
-                String codigoTuss = record.get(3);
-                String descricao = record.get(4);
-                String tipo = record.get(5);
+                if (record.size() < 8) continue;
+
+                String numeroGuia = record.get(0) != null ? record.get(0).trim() : "";
+                String beneficiarioNome = record.get(1) != null ? record.get(1).trim() : "";
+                String precCp = record.get(2) != null ? record.get(2).trim() : "";
+                String codigoTuss = record.get(3) != null ? record.get(3).trim() : "";
+                String descricao = record.get(4) != null ? record.get(4).trim() : "";
+                String tipo = record.get(5) != null ? record.get(5).trim() : "";
 
                 int quantidade = 1;
-                try { quantidade = Integer.parseInt(record.get(6)); } catch (Exception ignored) {}
+                try { quantidade = Integer.parseInt(record.get(6).trim()); } catch (Exception ignored) {}
 
                 BigDecimal valorUnitario = BigDecimal.ZERO;
-                try { valorUnitario = new BigDecimal(record.get(7)); } catch (Exception ignored) {}
+                try { valorUnitario = new BigDecimal(record.get(7).trim()); } catch (Exception ignored) {}
 
-                if (numeroGuia != null && guiasPorNumero.containsKey(numeroGuia)) {
+                if (!numeroGuia.isEmpty() && guiasPorNumero.containsKey(numeroGuia)) {
                     Guia guia = guiasPorNumero.get(numeroGuia);
-
-                    if (beneficiarioNome != null) guia.setBeneficiarioNome(beneficiarioNome);
-                    if (precCp != null) guia.setBeneficiarioPrecCp(precCp);
-                    if (codigoTuss != null) guia.setCodigoTuss(codigoTuss);
-
-                    BigDecimal valorTotalItem = valorUnitario.multiply(BigDecimal.valueOf(quantidade));
-                    guia.setValorFaturado(guia.getValorFaturado().add(valorTotalItem));
-
-                    if (!guiasParaAtualizar.contains(guia)) {
-                        guiasParaAtualizar.add(guia);
-                    }
-
-                    GuiaItem item = new GuiaItem();
-                    item.setGuiaId(guia.getId());
-                    item.setCodigoTuss(codigoTuss);
-                    item.setDescricaoItem(descricao);
-                    item.setTipo(tipo);
-                    item.setQuantidade(quantidade);
-                    item.setValorUnitario(valorUnitario);
-                    item.setDataItem(LocalDate.now());
-
-                    itensParaSalvar.add(item);
+                    registrarItemNaGuia(guia, beneficiarioNome, precCp, codigoTuss,
+                            descricao.isBlank() ? "Item sem descrição" : descricao,
+                            tipo.isBlank() ? "Procedimento" : tipo,
+                            quantidade > 0 ? quantidade : 1, valorUnitario,
+                            guiasParaAtualizar, itensParaSalvar);
                 }
             }
         }
@@ -337,6 +315,44 @@ public class LoteService {
             guiaRepository.saveAll(guiasParaAtualizar);
             log.info("{} guias atualizadas com os dados do espelho CSV.", guiasParaAtualizar.size());
         }
+    }
+
+    private void registrarItemNaGuia(Guia guia, String beneficiarioNome, String precCp, String codigoTuss,
+                                     String descricao, String tipo, int quantidade, BigDecimal valorUnitario,
+                                     List<Guia> guiasParaAtualizar, List<GuiaItem> itensParaSalvar) {
+        if (!guiasParaAtualizar.contains(guia)) {
+            guia.setValorFaturado(BigDecimal.ZERO);
+            guia.setValorContratado(BigDecimal.ZERO);
+            guiasParaAtualizar.add(guia);
+        }
+
+        if (beneficiarioNome != null && !beneficiarioNome.isBlank()) guia.setBeneficiarioNome(beneficiarioNome);
+        if (precCp != null && !precCp.isBlank()) guia.setBeneficiarioPrecCp(precCp);
+        if (codigoTuss != null && !codigoTuss.isBlank()) guia.setCodigoTuss(codigoTuss);
+
+        BigDecimal qtd = BigDecimal.valueOf(quantidade);
+        BigDecimal valorTotalItem = valorUnitario.multiply(qtd);
+        guia.setValorFaturado(guia.getValorFaturado().add(valorTotalItem));
+
+        if (ocsProcedimentoRepository != null && codigoTuss != null && !codigoTuss.isBlank()
+                && guia.getOcs() != null && guia.getOcs().getOcsId() != null) {
+            ocsProcedimentoRepository
+                    .findByOcs_OcsIdAndProcedimento_ProcCodigoDgp(guia.getOcs().getOcsId(), codigoTuss)
+                    .map(OcsProcedimento::getValor)
+                    .ifPresent(valorTabela -> guia.setValorContratado(
+                            guia.getValorContratado().add(valorTabela.multiply(qtd))));
+        }
+
+        GuiaItem item = new GuiaItem();
+        item.setGuiaId(guia.getId());
+        item.setCodigoTuss(codigoTuss != null ? codigoTuss : "");
+        item.setDescricaoItem(descricao);
+        item.setTipo(tipo);
+        item.setQuantidade(quantidade);
+        item.setValorUnitario(valorUnitario);
+        item.setDataItem(LocalDate.now());
+
+        itensParaSalvar.add(item);
     }
 
     private String getCellVal(Cell cell) {

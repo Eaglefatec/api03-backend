@@ -65,14 +65,16 @@ public class PacienteControllerTest {
         Paciente p = new Paciente("Capitão Souza", "55566677788", "Cmdo 2ª RM", 40, "(11) 98888-7777");
         p.setId(20L);
 
-        when(pacienteRepository.findByCpfPrec("55566677788")).thenReturn(java.util.Optional.empty());
+        when(pacienteRepository.findByCpfOrPrec(any(), any())).thenReturn(java.util.Optional.empty());
         when(pacienteRepository.save(any(Paciente.class))).thenReturn(p);
 
         String json = """
                 {
                     "nome": "Capitão Souza",
                     "om": "Cmdo 2ª RM",
-                    "cpfPrec": "55566677788",
+                    "cpf": "55566677788",
+                    "prec": "55566677788",
+                    "email": "souza@fusex.eb.mil.br",
                     "idade": 40,
                     "telefone": "(11) 98888-7777"
                 }

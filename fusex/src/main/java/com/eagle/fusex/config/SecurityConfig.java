@@ -29,46 +29,55 @@ public class SecurityConfig {
                 return new BCryptPasswordEncoder();
         }
 
+        // E-mails de acesso de cada perfil; o sistema direciona o usuário para a tela correspondente ao seu papel.
+        public static final String EMAIL_MEDICO = "medico@gmail.com";
+        public static final String EMAIL_EG = "eg@gmail.com";
+        public static final String EMAIL_MEDICO_CHEFE = "chefemedico@gmail.com";
+        public static final String EMAIL_CHEFE_SECAO = "chefesessao@gmail.com";
+        public static final String EMAIL_OCS = "ocs@gmail.com";
+        public static final String EMAIL_FATURAMENTO = "faturamento@gmail.com";
+        public static final String EMAIL_ADMIN = "admin@gmail.com";
+
         @Bean
         public UserDetailsService userDetailsService() {
                 UserDetails medico = User.builder()
-                                .username("medico")
+                                .username(EMAIL_MEDICO)
                                 .password(passwordEncoder().encode("senha123"))
                                 .roles("MEDICO")
                                 .build();
 
                 UserDetails emissorGuia = User.builder()
-                                .username("eg")
+                                .username(EMAIL_EG)
                                 .password(passwordEncoder().encode("senha123"))
                                 .roles("EG")
                                 .build();
 
                 UserDetails medicoChefe = User.builder()
-                                .username("medicochefe")
+                                .username(EMAIL_MEDICO_CHEFE)
                                 .password(passwordEncoder().encode("senha123"))
-                                .roles("MEDICO_CHEFE", "MEDICO")
+                                .roles("MEDICO_CHEFE")
                                 .build();
 
                 UserDetails chefeSecao = User.builder()
-                                .username("chefesecao")
+                                .username(EMAIL_CHEFE_SECAO)
                                 .password(passwordEncoder().encode("senha123"))
                                 .roles("CHEFE_SECAO")
                                 .build();
 
                 UserDetails admin = User.builder()
-                                .username("admin")
+                                .username(EMAIL_ADMIN)
                                 .password(passwordEncoder().encode("admin123"))
                                 .roles("ADMIN", "MEDICO", "EG", "MEDICO_CHEFE", "CHEFE_SECAO")
                                 .build();
 
                 UserDetails ocs = User.builder()
-                                .username("ocs")
+                                .username(EMAIL_OCS)
                                 .password(passwordEncoder().encode("senha123"))
                                 .roles("OCS")
                                 .build();
 
                 UserDetails faturamento = User.builder()
-                                .username("faturamento")
+                                .username(EMAIL_FATURAMENTO)
                                 .password(passwordEncoder().encode("senha123"))
                                 .roles("FATURAMENTO")
                                 .build();
@@ -119,6 +128,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/solicitacoes/*/guia-pdf",
                                                                 "/solicitacoes/*/guia-pdf/**")
                                                 .hasAnyRole("EG", "ADMIN")
+                                                // O Emissor de Guias (EG) envia o PDF para a esteira e dispara o e-mail final; quem assina são o Médico Chefe (1ª) e o Chefe da Seção (2ª).
                                                 .requestMatchers(HttpMethod.POST, "/assinaturas/guias",
                                                                 "/assinaturas/guias/*/enviar-email")
                                                 .hasAnyRole("EG", "ADMIN")
@@ -143,6 +153,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/faturamento/**").hasAnyRole("FATURAMENTO", "ADMIN")
                                                 .requestMatchers("/encaminhamentos/**").hasAnyRole("MEDICO", "ADMIN")
                                                 .requestMatchers("/importacao/**").hasRole("ADMIN")
+                                                .requestMatchers("/lisura/**").hasRole("ADMIN")
                                                 .requestMatchers(
                                                                 "/",
                                                                 "/*.html",

@@ -40,9 +40,9 @@ class PreGuiaControllerTest {
     @Test
     @DisplayName("GET /pre-guias - Deve retornar 403 para OCS e Faturamento")
     void deveRetornar403ParaPapeisNaoAutorizados() throws Exception {
-        mockMvc.perform(get("/pre-guias").with(httpBasic("ocs", "senha123")))
+        mockMvc.perform(get("/pre-guias").with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/pre-guias").with(httpBasic("faturamento", "senha123")))
+        mockMvc.perform(get("/pre-guias").with(httpBasic("faturamento@gmail.com", "senha123")))
                 .andExpect(status().isForbidden());
     }
 
@@ -53,7 +53,7 @@ class PreGuiaControllerTest {
                 1L, "token-1", "MARIA DE OLIVEIRA", "33333333333", "CLINICA SANTA LUCIA",
                 LocalDateTime.of(2026, 11, 10, 14, 30), null, true, false, null, null)));
 
-        mockMvc.perform(get("/pre-guias").param("status", "PENDENTE").with(httpBasic("eg", "senha123")))
+        mockMvc.perform(get("/pre-guias").param("status", "PENDENTE").with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].token").value("token-1"))
                 .andExpect(jsonPath("$[0].possuiEncaminhamento").value(true));

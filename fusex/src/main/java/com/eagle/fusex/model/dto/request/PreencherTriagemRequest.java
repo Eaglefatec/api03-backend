@@ -60,8 +60,8 @@ public class PreencherTriagemRequest {
 
     public String getCpfPrec() {
         if (cpf == null && prec == null) return null;
-        if (cpf != null && prec != null) return cpf + " / " + prec;
-        return cpf != null ? cpf : prec;
+        if (cpf != null && prec != null && !cpf.equals(prec) && !prec.isBlank()) return cpf + " / " + prec;
+        return (cpf != null && !cpf.isBlank()) ? cpf : prec;
     }
 
     public void setCpfPrec(String cpfPrec) {

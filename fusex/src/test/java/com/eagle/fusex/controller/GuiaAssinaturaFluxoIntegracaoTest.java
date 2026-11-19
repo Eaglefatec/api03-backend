@@ -89,7 +89,11 @@ class GuiaAssinaturaFluxoIntegracaoTest {
 
         MvcResult uploadResult = mockMvc.perform(multipart("/assinaturas/guias")
                         .file(arquivoPdf)
-                        .with(httpBasic("eg", "senha123")))
+                        .param("confirmarCadastro", "true")
+                        .param("pacienteNome", "Cap. Renato G. Vasconcelos")
+                        .param("pacientePrec", "34999111222")
+                        .param("pacienteEmail", "renato.vasconcelos@email.com.br")
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.numeroGuia").value("202610999"))
                 .andExpect(jsonPath("$.beneficiarioNome").value("Cap. Renato G. Vasconcelos"))
@@ -102,7 +106,7 @@ class GuiaAssinaturaFluxoIntegracaoTest {
         long guiaId = guiaCriada.get("id").asLong();
 
         mockMvc.perform(get("/assinaturas/guias")
-                        .with(httpBasic("eg", "senha123")))
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].statusCodigo").value(contains("AM")))
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].statusDescricao").value(contains("Aguardando Médico Chefe")));
@@ -110,13 +114,13 @@ class GuiaAssinaturaFluxoIntegracaoTest {
         // 2. Primeira assinatura pelo Médico Chefe
         mockMvc.perform(get("/assinaturas/pendencias")
                         .param("perfil", "med")
-                        .with(httpBasic("medicochefe", "senha123")))
+                        .with(httpBasic("chefemedico@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].statusCodigo", everyItem(is("AM"))))
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].numeroGuia").value(contains("202610999")));
 
         mockMvc.perform(get("/assinaturas/guias/" + guiaId + "/detalhes")
-                        .with(httpBasic("medicochefe", "senha123")))
+                        .with(httpBasic("chefemedico@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.numeroGuia").value("202610999"))
                 .andExpect(jsonPath("$.beneficiarioNome").value("Cap. Renato G. Vasconcelos"))
@@ -125,7 +129,7 @@ class GuiaAssinaturaFluxoIntegracaoTest {
                 .andExpect(jsonPath("$.procedimentos").isArray());
 
         mockMvc.perform(get("/assinaturas/guias/" + guiaId + "/pdf")
-                        .with(httpBasic("medicochefe", "senha123")))
+                        .with(httpBasic("chefemedico@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
 
@@ -139,7 +143,7 @@ class GuiaAssinaturaFluxoIntegracaoTest {
                 """.formatted(ASSINATURA_PNG_BASE64);
 
         mockMvc.perform(post("/assinaturas/guias/" + guiaId + "/decisao")
-                        .with(httpBasic("medicochefe", "senha123"))
+                        .with(httpBasic("chefemedico@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payloadSemConfirmacao))
                 .andExpect(status().isBadRequest());
@@ -154,7 +158,7 @@ class GuiaAssinaturaFluxoIntegracaoTest {
                 """.formatted(ASSINATURA_PNG_BASE64);
 
         mockMvc.perform(post("/assinaturas/guias/" + guiaId + "/decisao")
-                        .with(httpBasic("medicochefe", "senha123"))
+                        .with(httpBasic("chefemedico@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payloadAssinaturaMedico))
                 .andExpect(status().isOk())
@@ -165,13 +169,13 @@ class GuiaAssinaturaFluxoIntegracaoTest {
         // 3. Segunda assinatura pelo Chefe da Seção e conferência do PDF gerado
         mockMvc.perform(get("/assinaturas/pendencias")
                         .param("perfil", "sec")
-                        .with(httpBasic("chefesecao", "senha123")))
+                        .with(httpBasic("chefesessao@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].statusCodigo", everyItem(is("AS"))))
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].numeroGuia").value(contains("202610999")));
 
         mockMvc.perform(get("/assinaturas/guias/" + guiaId + "/detalhes")
-                        .with(httpBasic("chefesecao", "senha123")))
+                        .with(httpBasic("chefesessao@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.assinaturaMedicoBase64").value(ASSINATURA_PNG_BASE64))
                 .andExpect(jsonPath("$.dataAssinaturaMedico").isNotEmpty());
@@ -188,7 +192,7 @@ class GuiaAssinaturaFluxoIntegracaoTest {
         String validadeEsperada = LocalDate.now().plusDays(60).toString();
 
         mockMvc.perform(post("/assinaturas/guias/" + guiaId + "/decisao")
-                        .with(httpBasic("chefesecao", "senha123"))
+                        .with(httpBasic("chefesessao@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payloadAssinaturaSecao))
                 .andExpect(status().isOk())
@@ -204,7 +208,7 @@ class GuiaAssinaturaFluxoIntegracaoTest {
         assertTrue(Files.exists(Path.of(entidadeBanco.getCaminhoArquivoAssinado())), "PDF assinado deve existir em disco");
 
         MvcResult pdfAssinadoResult = mockMvc.perform(get("/assinaturas/guias/" + guiaId + "/pdf")
-                        .with(httpBasic("eg", "senha123")))
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andReturn();
@@ -214,16 +218,16 @@ class GuiaAssinaturaFluxoIntegracaoTest {
             assertEquals(1, docAssinado.getNumberOfPages());
             String textoPdfAssinado = new PDFTextStripper().getText(docAssinado);
             assertTrue(textoPdfAssinado.contains("202610999"), "Deve preservar o número da guia no PDF assinado");
-            assertTrue(textoPdfAssinado.contains("Medico Chefe FUSEX"), "Deve conter chancela do Médico Chefe");
-            assertTrue(textoPdfAssinado.contains("Chefe da Secao FUSEX"), "Deve conter chancela do Chefe da Seção");
-            assertTrue(textoPdfAssinado.contains("Valida por 60 dias a partir da assinatura do Chefe da Secao"),
+            assertTrue(textoPdfAssinado.contains("Assinatura Auditoria Previa Med/Dent"), "Deve conter chancela do Médico Chefe");
+            assertTrue(textoPdfAssinado.contains("Chefe do FuSEx"), "Deve conter chancela do Chefe da Seção");
+            assertTrue(textoPdfAssinado.contains("Valida por 60 dias a partir da assinatura do Chefe do FuSEx"),
                     "Deve conter a validade de 60 dias estampada no PDF");
             assertTrue(docAssinado.getPage(0).getResources().getXObjectNames().iterator().hasNext(),
                     "Deve conter as imagens PNG das rubricas embutidas como XObject no PDF");
         }
 
         mockMvc.perform(get("/guias/202610999/validade")
-                        .with(httpBasic("ocs", "senha123")))
+                        .with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.numeroGuia").value("202610999"))
                 .andExpect(jsonPath("$.valida").value(true))
@@ -231,27 +235,27 @@ class GuiaAssinaturaFluxoIntegracaoTest {
 
         // 4. Envio por e-mail ao beneficiário
         mockMvc.perform(get("/assinaturas/prontas-envio")
-                        .with(httpBasic("eg", "senha123")))
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].statusCodigo").value(contains("PE")))
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].beneficiarioEmail").value(contains("renato.vasconcelos@email.com.br")))
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].mensagemPronta").value(contains(containsString("Guia nº 202610999"))));
 
         mockMvc.perform(post("/assinaturas/guias/" + guiaId + "/enviar-email")
-                        .with(httpBasic("eg", "senha123")))
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.statusCodigo").value("EN"))
                 .andExpect(jsonPath("$.statusDescricao").value("Enviada ao beneficiário"))
                 .andExpect(jsonPath("$.dataEnvioEmail").isNotEmpty());
 
         mockMvc.perform(get("/assinaturas/enviadas")
-                        .with(httpBasic("eg", "senha123")))
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].statusCodigo").value(contains("EN")))
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].beneficiarioEmail").value(contains("renato.vasconcelos@email.com.br")));
 
         mockMvc.perform(get("/assinaturas/guias")
-                        .with(httpBasic("eg", "senha123")))
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].statusCodigo").value(contains("EN")))
                 .andExpect(jsonPath("$[?(@.id == " + guiaId + ")].statusDescricao").value(contains("Enviada ao beneficiário")));

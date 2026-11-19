@@ -167,8 +167,8 @@ class SolicitacaoMedicaServiceTest {
         SolicitacaoResponse response = service.criar(request);
 
         assertNotNull(response);
-        assertEquals("Tentativa Sobrescrita", paciente.getNome());
-        assertEquals("OM_ALTERADA", paciente.getOm());
+        assertEquals("João Silva", paciente.getNome());
+        assertEquals("OM001", paciente.getOm());
         verify(pacienteRepository).save(any(Paciente.class));
     }
 

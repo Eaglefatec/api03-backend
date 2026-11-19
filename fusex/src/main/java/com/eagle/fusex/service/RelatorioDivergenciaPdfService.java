@@ -13,7 +13,6 @@ import java.io.IOException;
 @Service
 public class RelatorioDivergenciaPdfService {
 
-    // Task-99: Geração de relatório de divergência em PDF via Apache PDFBox
     public byte[] gerarRelatorioDivergenciasPdf(Long fechamentoId) throws IOException {
         try (PDDocument document = new PDDocument()) {
             PDPage page = new PDPage();

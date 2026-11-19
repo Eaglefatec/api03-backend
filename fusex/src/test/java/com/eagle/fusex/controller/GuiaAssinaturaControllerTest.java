@@ -76,7 +76,7 @@ class GuiaAssinaturaControllerTest {
 
         mockMvc.perform(multipart("/assinaturas/guias")
                         .file(arquivo)
-                        .with(httpBasic("ocs", "senha123")))
+                        .with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isForbidden());
     }
 
@@ -85,11 +85,11 @@ class GuiaAssinaturaControllerTest {
     void devePermitirUploadComPapelEg() throws Exception {
         MockMultipartFile arquivo = new MockMultipartFile("arquivo", "guia_202610700.pdf", "application/pdf", new byte[]{1, 2, 3});
         GuiaAssinaturaResponse resp = criarResponseExemplo(1L, "202610700", StatusEsteiraAssinatura.AGUARDANDO_MEDICO_CHEFE);
-        when(guiaAssinaturaService.enviarGuiaParaAssinatura(any())).thenReturn(resp);
+        when(guiaAssinaturaService.enviarGuiaParaAssinatura(any(), any())).thenReturn(resp);
 
         mockMvc.perform(multipart("/assinaturas/guias")
                         .file(arquivo)
-                        .with(httpBasic("eg", "senha123")))
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.numeroGuia").value("202610700"))
                 .andExpect(jsonPath("$.statusCodigo").value("AM"));
@@ -103,7 +103,7 @@ class GuiaAssinaturaControllerTest {
 
         mockMvc.perform(get("/assinaturas/guias/pendencias")
                         .param("perfil", "med")
-                        .with(httpBasic("medicochefe", "senha123")))
+                        .with(httpBasic("chefemedico@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].numeroGuia").value("202610700"))
                 .andExpect(jsonPath("$[0].statusCodigo").value("AM"));
@@ -125,7 +125,7 @@ class GuiaAssinaturaControllerTest {
                 """;
 
         mockMvc.perform(post("/assinaturas/guias/3/decisao")
-                        .with(httpBasic("chefesecao", "senha123"))
+                        .with(httpBasic("chefesessao@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
@@ -140,7 +140,7 @@ class GuiaAssinaturaControllerTest {
         when(guiaAssinaturaService.enviarEmailBeneficiario(4L)).thenReturn(respEn);
 
         mockMvc.perform(post("/assinaturas/guias/4/enviar-email")
-                        .with(httpBasic("eg", "senha123")))
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.numeroGuia").value("202610703"))
                 .andExpect(jsonPath("$.statusCodigo").value("EN"));
@@ -150,7 +150,7 @@ class GuiaAssinaturaControllerTest {
     @DisplayName("GET /assinaturas/pendencias - Médico solicitante comum deve receber 403 ao tentar acessar fila do Médico Chefe")
     void deveRetornar403ParaMedicoComumNaFilaDeAssinatura() throws Exception {
         mockMvc.perform(get("/assinaturas/pendencias")
-                        .with(httpBasic("medico", "senha123")))
+                        .with(httpBasic("medico@gmail.com", "senha123")))
                 .andExpect(status().isForbidden());
     }
 
@@ -158,13 +158,37 @@ class GuiaAssinaturaControllerTest {
     @DisplayName("Deve retornar 400 quando parte do arquivo estiver ausente ou JSON for inválido")
     void deveRetornar400QuandoParteArquivoAusenteOuJsonInvalido() throws Exception {
         mockMvc.perform(multipart("/assinaturas/guias")
-                        .with(httpBasic("eg", "senha123")))
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isBadRequest());
 
         mockMvc.perform(post("/assinaturas/guias/3/decisao")
-                        .with(httpBasic("chefesecao", "senha123"))
+                        .with(httpBasic("chefesessao@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"decisao\": \"VALOR_INEXISTENTE\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Esteira - EG não assina: só Médico Chefe e Chefe da Seção acessam pendências e decisões")
+    void deveRetornar403ParaEgNasAssinaturas() throws Exception {
+        mockMvc.perform(get("/assinaturas/pendencias").with(httpBasic("eg@gmail.com", "senha123")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/assinaturas/guias/4/decisao").contentType("application/json").content("{}")
+                        .with(httpBasic("eg@gmail.com", "senha123")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Médico Chefe e Chefe da Seção são perfis separados e nenhum dos dois envia guia nem e-mail")
+    void deveSepararMedicoChefeEChefeSecao() throws Exception {
+        mockMvc.perform(post("/assinaturas/guias/4/enviar-email")
+                        .with(httpBasic("chefemedico@gmail.com", "senha123")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/assinaturas/guias/4/enviar-email")
+                        .with(httpBasic("chefesessao@gmail.com", "senha123")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/assinaturas/prontas-envio")
+                        .with(httpBasic("chefemedico@gmail.com", "senha123")))
+                .andExpect(status().isForbidden());
     }
 }

@@ -56,7 +56,7 @@ class GuiaControllerTest {
                         .param("numeroGuia", "202610606")
                         .param("beneficiarioPrecCp", "34596112300")
                         .param("dataAtendimento", "2026-10-02")
-                        .with(httpBasic("medico", "senha123")))
+                        .with(httpBasic("medico@gmail.com", "senha123")))
                 .andExpect(status().isForbidden());
     }
 
@@ -73,7 +73,7 @@ class GuiaControllerTest {
                         .param("numeroGuia", "202610606")
                         .param("beneficiarioPrecCp", "34596112300")
                         .param("dataAtendimento", "2026-10-02")
-                        .with(httpBasic("ocs", "senha123")))
+                        .with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.numeroGuia").value("202610606"))
                 .andExpect(jsonPath("$.status").value("SEM_LOTE"));
@@ -86,7 +86,7 @@ class GuiaControllerTest {
                 LocalDate.of(2026, 10, 2), "guia.pdf", StatusGuia.SEM_LOTE);
         when(guiaService.listarGuias()).thenReturn(List.of(response));
 
-        mockMvc.perform(get("/guias").with(httpBasic("ocs", "senha123")))
+        mockMvc.perform(get("/guias").with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].numeroGuia").value("202610606"));
     }

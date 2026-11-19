@@ -16,7 +16,6 @@ public class GlosaRequest {
     @NotNull(message = "O valor da glosa é obrigatório")
     private BigDecimal valorGlosa;
 
-    // Getters e Setters
     public Long getGuiaId() { return guiaId; }
     public void setGuiaId(Long guiaId) { this.guiaId = guiaId; }
 

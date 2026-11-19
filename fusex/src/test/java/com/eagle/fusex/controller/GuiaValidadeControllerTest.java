@@ -37,7 +37,7 @@ class GuiaValidadeControllerTest {
     @DisplayName("GET /guias/{numeroGuia}/validade - Deve retornar 403 FORBIDDEN para papel não autorizado")
     void deveRetornar403ParaPapelNaoAutorizado() throws Exception {
         mockMvc.perform(get("/guias/ABC-123/validade")
-                        .with(httpBasic("medico", "senha123")))
+                        .with(httpBasic("medico@gmail.com", "senha123")))
                 .andExpect(status().isForbidden());
     }
 
@@ -49,7 +49,7 @@ class GuiaValidadeControllerTest {
         when(guiaValidadeService.consultarValidade("ABC-123")).thenReturn(response);
 
         mockMvc.perform(get("/guias/ABC-123/validade")
-                        .with(httpBasic("ocs", "senha123")))
+                        .with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valida").value(true))
                 .andExpect(jsonPath("$.nomePaciente").value("Paciente Teste"))
@@ -64,7 +64,7 @@ class GuiaValidadeControllerTest {
         when(guiaValidadeService.consultarValidade("ABC-123")).thenReturn(response);
 
         mockMvc.perform(get("/guias/ABC-123/validade")
-                        .with(httpBasic("ocs", "senha123")))
+                        .with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valida").value(false))
                 .andExpect(jsonPath("$.motivoInvalidez").value("GUIA_EXPIRADA"));

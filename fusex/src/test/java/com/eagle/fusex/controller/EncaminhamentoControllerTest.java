@@ -60,7 +60,7 @@ class EncaminhamentoControllerTest {
         mockMvc.perform(multipart("/encaminhamentos")
                         .file(arquivo)
                         .param("medicoId", "1")
-                        .with(httpBasic("medico", "senha123")))
+                        .with(httpBasic("medico@gmail.com", "senha123")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.mensagem").value("Encaminhamento realizado com sucesso"));
@@ -79,7 +79,7 @@ class EncaminhamentoControllerTest {
         mockMvc.perform(multipart("/encaminhamentos")
                         .file(arquivo)
                         .param("medicoId", "1")
-                        .with(httpBasic("medico", "senha123")))
+                        .with(httpBasic("medico@gmail.com", "senha123")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Extensão de arquivo não permitida. Apenas PDF, PNG e JPG são aceitos."));

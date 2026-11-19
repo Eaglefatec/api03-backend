@@ -102,7 +102,6 @@ public class TriagemPreGuiaService {
         Ocs ocs = ocsRepository.findById(request.getOcsId())
                 .orElseThrow(() -> new OcsInvalidoException("Selecione uma clínica/OCS válida"));
 
-        // Validar se a OCS atende os procedimentos solicitados
         validarCoberturaOcs(solicitacao, ocs);
 
         TriagemPreGuia triagem = new TriagemPreGuia();
@@ -112,7 +111,6 @@ public class TriagemPreGuiaService {
 
         triagemRepository.save(triagem);
 
-        // Atualizar dados cadastrais faltantes no Paciente
         Paciente paciente = solicitacao.getPaciente();
         if (paciente != null) {
             if (request.getIdade() != null) {

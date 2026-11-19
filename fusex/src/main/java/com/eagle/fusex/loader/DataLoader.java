@@ -29,8 +29,8 @@ public class DataLoader implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         if (medicoRepository.count() == 0) {
-            Medico medico1 = new Medico("Dr. João Silva", "123456", true);
-            Medico medico2 = new Medico("Dra. Maria Santos", "654321", false);
+            Medico medico1 = new Medico("Médico", "123456", true);
+            Medico medico2 = new Medico("Médico Não Credenciado", "654321", false);
 
             medicoRepository.save(medico1);
             medicoRepository.save(medico2);
@@ -59,11 +59,11 @@ public class DataLoader implements CommandLineRunner {
             }
         }
 
-        if (ocsRepository.findByLoginUsuario("ocs").isEmpty()) {
+        if (ocsRepository.findByLoginUsuario("ocs@gmail.com").isEmpty()) {
             ocsRepository.findFirstByOrderByOcsIdAsc().ifPresent(ocs -> {
-                ocs.setLoginUsuario("ocs");
+                ocs.setLoginUsuario("ocs@gmail.com");
                 ocsRepository.save(ocs);
-                log.info("Usuário 'ocs' vinculado à OCS '{}'", ocs.getOcsNome());
+                log.info("Usuário 'ocs@gmail.com' vinculado à OCS '{}'", ocs.getOcsNome());
             });
         }
     }
