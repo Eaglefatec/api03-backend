@@ -390,7 +390,7 @@ public class GuiaRelatorioLisuraPdfService {
             retaH(MARGEM, MARGEM + coluna, base, TEXTO, 0.9f);
             retaH(direita, MARGEM + largura, base, TEXTO, 0.9f);
             Glosa ultima = dados.ultimaGlosa();
-            String auditor = ultima != null && ultima.getAuditor() != null ? ultima.getAuditor() : " ";
+            String auditor = "Sgt. Ricardo Botan";
             centralizado(normal, 9, TEXTO, ajustar(normal, 9, auditor, coluna), MARGEM + coluna / 2, base - 13);
             centralizado(normal, 7, CINZA, "Auditoria de Lisura", MARGEM + coluna / 2, base - 23);
             centralizado(normal, 9, TEXTO, "Visto do Chefe da Seção", direita + coluna / 2, base - 13);
