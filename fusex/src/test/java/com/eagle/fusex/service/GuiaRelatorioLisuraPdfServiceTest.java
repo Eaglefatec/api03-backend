@@ -124,6 +124,26 @@ class GuiaRelatorioLisuraPdfServiceTest {
     }
 
     @Test
+    void testGerar_SemPrecoContratado_NaoApresentaComoConferido() throws IOException {
+        guia.setValorContratado(BigDecimal.ZERO);
+        GuiaItem item = new GuiaItem();
+        item.setCodigoTuss("40301842");
+        item.setDescricaoItem("Ferro sérico, dosagem");
+        item.setTipo("Procedimento");
+        item.setQuantidade(1);
+        item.setValorUnitario(new BigDecimal("11.25"));
+        when(guiaItemRepository.findByGuiaId(20L)).thenReturn(List.of(item));
+
+        String verso = textoDaPagina(service.gerarGuiaComRelatorio(20L).conteudo(), 2);
+
+        assertTrue(verso.contains("Não cadastrado"));
+        assertTrue(verso.contains("Não calculada"));
+        assertTrue(verso.contains("Preço contratado não cadastrado"));
+        assertFalse(verso.contains("Valores conferidos"));
+        assertFalse(verso.contains("Sem divergência"));
+    }
+
+    @Test
     void testGerar_ValorDoEspelhoSomaOsItens() throws IOException {
         GuiaItem item = new GuiaItem();
         item.setCodigoTuss("10101012");

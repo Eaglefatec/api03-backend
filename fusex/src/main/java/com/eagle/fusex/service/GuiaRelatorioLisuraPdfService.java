@@ -176,6 +176,10 @@ public class GuiaRelatorioLisuraPdfService {
             return espelho.subtract(contratado);
         }
 
+        boolean semPrecoContratado() {
+            return contratado.signum() <= 0;
+        }
+
         Glosa ultimaGlosa() {
             return glosas.isEmpty() ? null : glosas.get(glosas.size() - 1);
         }
@@ -256,14 +260,16 @@ public class GuiaRelatorioLisuraPdfService {
 
         private void cruzamento() throws IOException {
             secao("Cruzamento de valores");
+            boolean semPreco = dados.semPrecoContratado();
             BigDecimal diferenca = dados.diferenca();
-            String textoDiferenca = diferenca.signum() == 0 ? "Sem divergência"
+            String textoDiferenca = semPreco ? "Não calculada"
+                    : diferenca.signum() == 0 ? "Sem divergência"
                     : (diferenca.signum() > 0 ? "+" : "-") + moeda(diferenca.abs());
             Glosa ultima = dados.ultimaGlosa();
             String revisado = ultima != null ? moeda(ultima.getValorGlosa())
-                    : diferenca.signum() == 0 ? moeda(dados.espelho()) : "Sem revisão";
+                    : !semPreco && diferenca.signum() == 0 ? moeda(dados.espelho()) : "Sem revisão";
             String[][] caixas = {
-                    {"Contratado (guia)", moeda(dados.contratado())},
+                    {"Contratado (guia)", semPreco ? "Não cadastrado" : moeda(dados.contratado())},
                     {"No espelho", moeda(dados.espelho())},
                     {"Diferença", textoDiferenca},
                     {"Valor revisado", revisado}
@@ -280,7 +286,7 @@ public class GuiaRelatorioLisuraPdfService {
                     retaV(x, y, y - altura, LINHA, 0.8f);
                 }
                 escrever(normal, 7.5f, CINZA, caixas[i][0], x + 10, y - 13);
-                Color cor = i == 2 && diferenca.signum() != 0 ? VERMELHO : TEXTO;
+                Color cor = (i == 0 && semPreco) || (i == 2 && !semPreco && diferenca.signum() != 0) ? VERMELHO : TEXTO;
                 escrever(negrito, 11, cor, ajustar(negrito, 11, caixas[i][1], caixa - 20), x + 10, y - 29);
             }
             y -= altura + 22;
@@ -348,6 +354,12 @@ public class GuiaRelatorioLisuraPdfService {
             secao("Parecer");
             List<Glosa> glosas = dados.glosas();
             if (glosas.isEmpty()) {
+                if (dados.semPrecoContratado()) {
+                    paragrafo(normal, 9, CINZA, "Preço contratado não cadastrado para os procedimentos desta guia. "
+                            + "Valor no espelho: " + moeda(dados.espelho())
+                            + ". A conferência de valores precisa ser feita manualmente.");
+                    return;
+                }
                 BigDecimal diferenca = dados.diferenca();
                 paragrafo(normal, 9, CINZA, diferenca.signum() == 0
                         ? "Valores conferidos. Nenhuma glosa registrada."
