@@ -1,12 +1,15 @@
 package com.eagle.fusex.controller;
 
 import com.eagle.fusex.model.dto.request.GlosaRequest;
+import com.eagle.fusex.model.dto.response.ArquivoLoteDownload;
 import com.eagle.fusex.model.dto.response.DivergenciaResponse;
 import com.eagle.fusex.model.dto.response.FaturamentoLoteResponse;
 import com.eagle.fusex.model.entity.GuiaItem;
+import com.eagle.fusex.service.GuiaRelatorioLisuraPdfService;
 import com.eagle.fusex.service.LisuraService;
 import com.eagle.fusex.service.RelatorioDivergenciaPdfService;
 import jakarta.validation.Valid;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,11 +25,14 @@ public class LisuraController {
 
     private final LisuraService lisuraService;
     private final RelatorioDivergenciaPdfService pdfService;
+    private final GuiaRelatorioLisuraPdfService guiaRelatorioPdfService;
 
     public LisuraController(LisuraService lisuraService,
-                            RelatorioDivergenciaPdfService pdfService) {
+                            RelatorioDivergenciaPdfService pdfService,
+                            GuiaRelatorioLisuraPdfService guiaRelatorioPdfService) {
         this.lisuraService = lisuraService;
         this.pdfService = pdfService;
+        this.guiaRelatorioPdfService = guiaRelatorioPdfService;
     }
 
     @GetMapping("/fechamento/{fechamentoId}/lotes")
@@ -53,6 +59,16 @@ public class LisuraController {
     public ResponseEntity<Void> registrarGlosa(@RequestBody @Valid GlosaRequest request) {
         lisuraService.registrarGlosa(request);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/guias/{guiaId}/pdf-relatorio")
+    public ResponseEntity<byte[]> abrirGuiaComRelatorio(@PathVariable Long guiaId) {
+        ArquivoLoteDownload arquivo = guiaRelatorioPdfService.gerarGuiaComRelatorio(guiaId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline().filename(arquivo.nome()).build().toString())
+                .body(arquivo.conteudo());
     }
 
     @GetMapping("/relatorio/{fechamentoId}")

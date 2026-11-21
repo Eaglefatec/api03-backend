@@ -1,0 +1,2 @@
+ALTER TABLE tb_glosa ADD COLUMN conclusao TEXT NULL;
+ALTER TABLE tb_glosa ADD COLUMN auditor VARCHAR(255) NULL;

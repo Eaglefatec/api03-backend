@@ -185,6 +185,8 @@ public class LisuraService {
         glosa.setCodigoTuss(request.getCodigoTuss());
         glosa.setJustificativaMilitar(request.getJustificativaMilitar());
         glosa.setValorGlosa(request.getValorGlosa());
+        glosa.setConclusao(request.getConclusao());
+        glosa.setAuditor(auditorResponsavel);
 
         glosaRepository.save(glosa);
 
