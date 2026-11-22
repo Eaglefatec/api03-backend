@@ -41,13 +41,16 @@ class GuiaServiceTest {
     @Mock
     private FileStorageService fileStorageService;
 
+    @Mock
+    private GuiaAssinaturaPdfService pdfService;
+
     private GuiaService service;
     private Ocs ocsLogada;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new GuiaService(guiaRepository, ocsRepository, fileStorageService);
+        service = new GuiaService(guiaRepository, ocsRepository, fileStorageService, pdfService);
 
         ocsLogada = new Ocs();
         ocsLogada.setOcsId(1L);
@@ -102,6 +105,64 @@ class GuiaServiceTest {
     @Test
     void testAnexarGuia_NumeroGuiaDuplicado_LancaExcecao() {
         when(ocsRepository.findByLoginUsuario("ocs")).thenReturn(Optional.of(ocsLogada));
+        when(guiaRepository.existsByNumeroGuia("202610606")).thenReturn(true);
+
+        MockMultipartFile arquivo = new MockMultipartFile("arquivo", "guia.pdf", "application/pdf", new byte[]{1, 2, 3});
+
+        assertThrows(ArquivoInvalidoException.class, () ->
+                service.anexarGuia("202610606", "34596112300", LocalDate.of(2026, 10, 2), arquivo));
+    }
+
+    private GuiaAssinaturaPdfService.DadosExtraidosPdf dadosPdfComNumero(String numero) {
+        return new GuiaAssinaturaPdfService.DadosExtraidosPdf(numero, null, null, null, null, List.of(), numero != null);
+    }
+
+    @Test
+    void testAnexarGuia_NumeroDoPdfJaExiste_LancaExcecaoMesmoComOutroNomeDeArquivo() {
+        when(ocsRepository.findByLoginUsuario("ocs")).thenReturn(Optional.of(ocsLogada));
+        when(pdfService.extrairDadosDoPdf(any())).thenReturn(dadosPdfComNumero("202610606"));
+        when(guiaRepository.existsByNumeroGuia("202610606")).thenReturn(true);
+
+        MockMultipartFile arquivo = new MockMultipartFile("arquivo", "outro-nome-qualquer.pdf", "application/pdf", new byte[]{1, 2, 3});
+
+        ArquivoInvalidoException ex = assertThrows(ArquivoInvalidoException.class, () ->
+                service.anexarGuia("202610606", "34596112300", LocalDate.of(2026, 10, 2), arquivo));
+        assertTrue(ex.getMessage().contains("Já existe uma guia anexada"));
+        verify(guiaRepository, never()).save(any(Guia.class));
+    }
+
+    @Test
+    void testAnexarGuia_NumeroInformadoDiferenteDoPdf_LancaExcecao() {
+        when(ocsRepository.findByLoginUsuario("ocs")).thenReturn(Optional.of(ocsLogada));
+        when(pdfService.extrairDadosDoPdf(any())).thenReturn(dadosPdfComNumero("202610606"));
+
+        MockMultipartFile arquivo = new MockMultipartFile("arquivo", "guia.pdf", "application/pdf", new byte[]{1, 2, 3});
+
+        ArquivoInvalidoException ex = assertThrows(ArquivoInvalidoException.class, () ->
+                service.anexarGuia("999999999", "34596112300", LocalDate.of(2026, 10, 2), arquivo));
+        assertTrue(ex.getMessage().contains("não confere"));
+        verify(guiaRepository, never()).save(any(Guia.class));
+    }
+
+    @Test
+    void testAnexarGuia_NumeroDoPdfIgualAoInformado_SalvaGuia() {
+        when(ocsRepository.findByLoginUsuario("ocs")).thenReturn(Optional.of(ocsLogada));
+        when(pdfService.extrairDadosDoPdf(any())).thenReturn(dadosPdfComNumero("202610606"));
+        when(guiaRepository.existsByNumeroGuia("202610606")).thenReturn(false);
+        when(fileStorageService.salvar(any(MultipartFile.class), anyString())).thenReturn("uploads/guia.pdf");
+        when(guiaRepository.save(any(Guia.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        MockMultipartFile arquivo = new MockMultipartFile("arquivo", "guia.pdf", "application/pdf", new byte[]{1, 2, 3});
+
+        GuiaResponse response = service.anexarGuia("202610606", "34596112300", LocalDate.of(2026, 10, 2), arquivo);
+
+        assertEquals("202610606", response.getNumeroGuia());
+    }
+
+    @Test
+    void testAnexarGuia_PdfSemNumeroIdentificavel_ValidaPeloNumeroInformado() {
+        when(ocsRepository.findByLoginUsuario("ocs")).thenReturn(Optional.of(ocsLogada));
+        when(pdfService.extrairDadosDoPdf(any())).thenReturn(dadosPdfComNumero(null));
         when(guiaRepository.existsByNumeroGuia("202610606")).thenReturn(true);
 
         MockMultipartFile arquivo = new MockMultipartFile("arquivo", "guia.pdf", "application/pdf", new byte[]{1, 2, 3});

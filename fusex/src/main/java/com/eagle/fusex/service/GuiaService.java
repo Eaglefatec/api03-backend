@@ -32,35 +32,37 @@ public class GuiaService {
     private final OcsRepository ocsRepository;
     private final FileStorageService fileStorageService;
     private final GuiaValorContratadoPdfService valorContratadoPdfService;
+    private final GuiaAssinaturaPdfService pdfService;
 
-    public GuiaService(GuiaRepository guiaRepository, OcsRepository ocsRepository,
-                        FileStorageService fileStorageService) {
-        this(guiaRepository, ocsRepository, fileStorageService, new GuiaValorContratadoPdfService());
-    }
+public GuiaService(GuiaRepository guiaRepository, OcsRepository ocsRepository,
+                   FileStorageService fileStorageService, GuiaAssinaturaPdfService pdfService) {
+    this(guiaRepository, ocsRepository, fileStorageService, pdfService, new GuiaValorContratadoPdfService());
+}
 
-    @Autowired
-    public GuiaService(GuiaRepository guiaRepository, OcsRepository ocsRepository,
-                        FileStorageService fileStorageService,
-                        GuiaValorContratadoPdfService valorContratadoPdfService) {
-        this.guiaRepository = guiaRepository;
-        this.ocsRepository = ocsRepository;
-        this.fileStorageService = fileStorageService;
-        this.valorContratadoPdfService = valorContratadoPdfService;
-    }
-
+@Autowired
+public GuiaService(GuiaRepository guiaRepository, OcsRepository ocsRepository,
+                   FileStorageService fileStorageService, GuiaAssinaturaPdfService pdfService,
+                   GuiaValorContratadoPdfService valorContratadoPdfService) {
+    this.guiaRepository = guiaRepository;
+    this.ocsRepository = ocsRepository;
+    this.fileStorageService = fileStorageService;
+    this.pdfService = pdfService;
+    this.valorContratadoPdfService = valorContratadoPdfService;
+}
+    
     @Transactional
     public GuiaResponse anexarGuia(String numeroGuia, String beneficiarioPrecCp, LocalDate dataAtendimento,
-                                    MultipartFile arquivo) {
+                                   MultipartFile arquivo) {
         Ocs ocs = buscarOcsLogada();
         validarArquivo(arquivo);
-        validarNumeroGuia(numeroGuia);
+        String numeroGuiaValidado = validarNumeroGuia(numeroGuia, arquivo);
 
         String nomeArquivoUnico = UUID.randomUUID() + ".pdf";
         String caminhoArquivo = fileStorageService.salvar(arquivo, nomeArquivoUnico);
 
         Guia guia = new Guia();
         guia.setOcs(ocs);
-        guia.setNumeroGuia(numeroGuia);
+        guia.setNumeroGuia(numeroGuiaValidado);
         guia.setBeneficiarioPrecCp(beneficiarioPrecCp);
         guia.setDataAtendimento(dataAtendimento);
         guia.setNomeArquivo(arquivo.getOriginalFilename());
@@ -116,10 +118,47 @@ public class GuiaService {
         }
     }
 
-    private void validarNumeroGuia(String numeroGuia) {
-        if (guiaRepository.existsByNumeroGuia(numeroGuia)) {
-            throw new ArquivoInvalidoException("Já existe uma guia anexada com este número");
+    /**
+     * Valida o número da guia usando o número que está escrito dentro do PDF (e não o nome do arquivo).
+     * Se o PDF trouxer um número, ele precisa bater com o informado no formulário e não pode já existir.
+     * Se não for possível ler o número no PDF, valida apenas o número informado no formulário.
+     *
+     * @return o número da guia que deve ser gravado
+     */
+    private String validarNumeroGuia(String numeroInformado, MultipartFile arquivo) {
+        String numeroDigitado = normalizarNumeroGuia(numeroInformado);
+        String numeroNoPdf = lerNumeroGuiaDoPdf(arquivo);
+
+        if (numeroNoPdf != null && !numeroNoPdf.equalsIgnoreCase(numeroDigitado)) {
+            throw new ArquivoInvalidoException("O número informado (" + numeroDigitado
+                    + ") não confere com o número da guia identificado no PDF (" + numeroNoPdf + ")");
         }
+
+        String numeroFinal = numeroNoPdf != null ? numeroNoPdf : numeroDigitado;
+        if (guiaRepository.existsByNumeroGuia(numeroFinal)) {
+            throw new ArquivoInvalidoException("Já existe uma guia anexada com este número (" + numeroFinal + ")");
+        }
+        return numeroFinal;
+    }
+
+    private String lerNumeroGuiaDoPdf(MultipartFile arquivo) {
+        try {
+            GuiaAssinaturaPdfService.DadosExtraidosPdf dados = pdfService.extrairDadosDoPdf(arquivo.getBytes());
+            if (dados == null) {
+                return null;
+            }
+            String numero = normalizarNumeroGuia(dados.numeroGuia());
+            return numero.isEmpty() ? null : numero;
+        } catch (IOException e) {
+            throw new ArquivoInvalidoException("Não foi possível ler o conteúdo do PDF");
+        }
+    }
+
+    private String normalizarNumeroGuia(String numero) {
+        if (numero == null) {
+            return "";
+        }
+        return numero.trim().replaceAll("[./-]+$", "");
     }
 
     private GuiaResponse toResponse(Guia guia) {
