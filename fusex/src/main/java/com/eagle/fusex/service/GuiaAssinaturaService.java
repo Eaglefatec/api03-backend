@@ -108,7 +108,7 @@ public class GuiaAssinaturaService {
 
     @Transactional
     public GuiaAssinaturaResponse enviarGuiaParaAssinatura(MultipartFile arquivo, CadastroPacienteConfirmacaoDTO confirmacao,
-                                                          DadosPreGuia preGuia) {
+                                                           DadosPreGuia preGuia) {
         validarArquivoPdf5Mb(arquivo);
 
         byte[] bytesPdf;
@@ -227,7 +227,6 @@ public class GuiaAssinaturaService {
             beneficiarioPrec = pacienteCadastrado.getPrec();
             beneficiarioEmail = pacienteCadastrado.getEmail();
         } else {
-            // Se o beneficiário ainda não estiver cadastrado, pede confirmação na tela antes de concluir o envio da guia
             String nomeDescricao = beneficiarioNome != null ? beneficiarioNome : "Não identificado no PDF";
             String precDescricao = beneficiarioPrec != null ? beneficiarioPrec : "Não identificado";
             throw new PacienteNaoEncontradoException(
@@ -605,7 +604,6 @@ public class GuiaAssinaturaService {
         if (bytes == null || bytes.length < 4) {
             return false;
         }
-        // Verifica pelos primeiros bytes do arquivo se a imagem é realmente PNG, JPEG ou WebP
         boolean ehPng = bytes.length >= 8
                 && (bytes[0] & 0xFF) == 0x89
                 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G';
@@ -780,9 +778,9 @@ public class GuiaAssinaturaService {
                 validade,
                 g.getDataEnvioEmail(),
                 g.getStatusEmail(),
+                g.getMotivoRejeicao(),
                 montarMensagemPronta(g),
                 mensagem
         );
     }
 }
-
