@@ -136,9 +136,9 @@ class GuiaRelatorioLisuraPdfServiceTest {
 
         String verso = textoDaPagina(service.gerarGuiaComRelatorio(20L).conteudo(), 2);
 
-        assertTrue(verso.contains("Não cadastrado"));
+        assertTrue(verso.contains("Não identificado"));
         assertTrue(verso.contains("Não calculada"));
-        assertTrue(verso.contains("Preço contratado não cadastrado"));
+        assertTrue(verso.contains("Valor contratado não identificado na guia"));
         assertFalse(verso.contains("Valores conferidos"));
         assertFalse(verso.contains("Sem divergência"));
     }

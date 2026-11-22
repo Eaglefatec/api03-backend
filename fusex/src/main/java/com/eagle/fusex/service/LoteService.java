@@ -36,8 +36,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -213,6 +215,7 @@ public class LoteService {
     private void processarExcel(InputStream is, Map<String, Guia> guiasPorNumero) throws Exception {
         List<GuiaItem> itensParaSalvar = new ArrayList<>();
         List<Guia> guiasParaAtualizar = new ArrayList<>();
+        Set<Guia> guiasSemValorNaGuia = new HashSet<>();
 
         try (Workbook workbook = WorkbookFactory.create(is)) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -251,7 +254,7 @@ public class LoteService {
                             descricao.isEmpty() ? "Item sem descrição" : descricao,
                             tipo.isEmpty() ? "Procedimento" : tipo,
                             quantidade > 0 ? quantidade : 1, valorUnitario,
-                            guiasParaAtualizar, itensParaSalvar);
+                            guiasParaAtualizar, itensParaSalvar, guiasSemValorNaGuia);
                 } else {
                     log.warn("Linha do Excel com Guia '{}' ignorada ou não encontrada nas guias selecionadas.", numeroGuia);
                 }
@@ -272,6 +275,7 @@ public class LoteService {
     private void processarCsv(InputStream is, Map<String, Guia> guiasPorNumero) throws Exception {
         List<GuiaItem> itensParaSalvar = new ArrayList<>();
         List<Guia> guiasParaAtualizar = new ArrayList<>();
+        Set<Guia> guiasSemValorNaGuia = new HashSet<>();
 
         try (Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
             Iterable<CSVRecord> records = CSVFormat.DEFAULT.builder()
@@ -301,7 +305,7 @@ public class LoteService {
                             descricao.isBlank() ? "Item sem descrição" : descricao,
                             tipo.isBlank() ? "Procedimento" : tipo,
                             quantidade > 0 ? quantidade : 1, valorUnitario,
-                            guiasParaAtualizar, itensParaSalvar);
+                            guiasParaAtualizar, itensParaSalvar, guiasSemValorNaGuia);
                 }
             }
         }
@@ -319,10 +323,14 @@ public class LoteService {
 
     private void registrarItemNaGuia(Guia guia, String beneficiarioNome, String precCp, String codigoTuss,
                                      String descricao, String tipo, int quantidade, BigDecimal valorUnitario,
-                                     List<Guia> guiasParaAtualizar, List<GuiaItem> itensParaSalvar) {
+                                     List<Guia> guiasParaAtualizar, List<GuiaItem> itensParaSalvar,
+                                     Set<Guia> guiasSemValorNaGuia) {
         if (!guiasParaAtualizar.contains(guia)) {
             guia.setValorFaturado(BigDecimal.ZERO);
-            guia.setValorContratado(BigDecimal.ZERO);
+            if (guia.getValorContratado() == null || guia.getValorContratado().signum() <= 0) {
+                guia.setValorContratado(BigDecimal.ZERO);
+                guiasSemValorNaGuia.add(guia);
+            }
             guiasParaAtualizar.add(guia);
         }
 
@@ -334,7 +342,8 @@ public class LoteService {
         BigDecimal valorTotalItem = valorUnitario.multiply(qtd);
         guia.setValorFaturado(guia.getValorFaturado().add(valorTotalItem));
 
-        if (ocsProcedimentoRepository != null && codigoTuss != null && !codigoTuss.isBlank()
+        if (guiasSemValorNaGuia.contains(guia)
+                && ocsProcedimentoRepository != null && codigoTuss != null && !codigoTuss.isBlank()
                 && guia.getOcs() != null && guia.getOcs().getOcsId() != null) {
             ocsProcedimentoRepository
                     .findByOcs_OcsIdAndProcedimento_ProcCodigoDgp(guia.getOcs().getOcsId(), codigoTuss)
