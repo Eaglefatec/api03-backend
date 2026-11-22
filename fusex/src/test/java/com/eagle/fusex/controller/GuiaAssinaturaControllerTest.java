@@ -55,6 +55,7 @@ class GuiaAssinaturaControllerTest {
                 LocalDate.now().plusDays(60),
                 null,
                 StatusEmail.SIMULADO,
+                null,
                 "Mensagem pronta",
                 "Operação realizada"
         );

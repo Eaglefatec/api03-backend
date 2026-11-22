@@ -780,6 +780,7 @@ public class GuiaAssinaturaService {
                 validade,
                 g.getDataEnvioEmail(),
                 g.getStatusEmail(),
+                g.getMotivoRejeicao(),
                 montarMensagemPronta(g),
                 mensagem
         );
