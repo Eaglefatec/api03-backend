@@ -12,11 +12,13 @@ import com.eagle.fusex.security.SecurityUtils;
 import com.eagle.fusex.storage.FileStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -29,16 +31,25 @@ public class GuiaService {
     private final GuiaRepository guiaRepository;
     private final OcsRepository ocsRepository;
     private final FileStorageService fileStorageService;
+    private final GuiaValorContratadoPdfService valorContratadoPdfService;
     private final GuiaAssinaturaPdfService pdfService;
 
-    public GuiaService(GuiaRepository guiaRepository, OcsRepository ocsRepository,
-                       FileStorageService fileStorageService, GuiaAssinaturaPdfService pdfService) {
-        this.guiaRepository = guiaRepository;
-        this.ocsRepository = ocsRepository;
-        this.fileStorageService = fileStorageService;
-        this.pdfService = pdfService;
-    }
+public GuiaService(GuiaRepository guiaRepository, OcsRepository ocsRepository,
+                   FileStorageService fileStorageService, GuiaAssinaturaPdfService pdfService) {
+    this(guiaRepository, ocsRepository, fileStorageService, pdfService, new GuiaValorContratadoPdfService());
+}
 
+@Autowired
+public GuiaService(GuiaRepository guiaRepository, OcsRepository ocsRepository,
+                   FileStorageService fileStorageService, GuiaAssinaturaPdfService pdfService,
+                   GuiaValorContratadoPdfService valorContratadoPdfService) {
+    this.guiaRepository = guiaRepository;
+    this.ocsRepository = ocsRepository;
+    this.fileStorageService = fileStorageService;
+    this.pdfService = pdfService;
+    this.valorContratadoPdfService = valorContratadoPdfService;
+}
+    
     @Transactional
     public GuiaResponse anexarGuia(String numeroGuia, String beneficiarioPrecCp, LocalDate dataAtendimento,
                                    MultipartFile arquivo) {
@@ -59,12 +70,21 @@ public class GuiaService {
         guia.setTipoArquivo(arquivo.getContentType());
         guia.setTamanhoBytes(arquivo.getSize());
         guia.setStatus(StatusGuia.SEM_LOTE);
+        guia.setValorContratado(valorContratadoDaGuia(arquivo));
 
         Guia salva = guiaRepository.save(guia);
 
         log.info("Guia {} anexada pela OCS {}", salva.getNumeroGuia(), ocs.getOcsNome());
 
         return toResponse(salva);
+    }
+
+    private BigDecimal valorContratadoDaGuia(MultipartFile arquivo) {
+        try {
+            return valorContratadoPdfService.extrair(arquivo.getBytes()).orElse(BigDecimal.ZERO);
+        } catch (IOException e) {
+            return BigDecimal.ZERO;
+        }
     }
 
     @Transactional(readOnly = true)

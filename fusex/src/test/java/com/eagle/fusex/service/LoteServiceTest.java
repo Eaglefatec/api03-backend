@@ -221,4 +221,39 @@ class LoteServiceTest {
         assertEquals("40301010", itensCaptor.getValue().get(0).getCodigoTuss());
         assertEquals("Insumo", itensCaptor.getValue().get(1).getTipo());
     }
+
+    @Test
+    void testGerarLote_GuiaComValorContratado_MantemValorDaGuiaEComparaComEspelho() {
+        when(ocsRepository.findByLoginUsuario("ocs")).thenReturn(Optional.of(ocsLogada));
+        Guia guia = criarGuia(1L, ocsLogada, StatusGuia.SEM_LOTE);
+        guia.setNumeroGuia("202610857");
+        guia.setValorContratado(new BigDecimal("15.74"));
+        when(guiaRepository.findAllById(List.of(1L))).thenReturn(List.of(guia));
+        when(loteRepository.countByOcs_OcsIdAndCompetenciaAnoAndCompetenciaMes(eq(1L), anyInt(), anyInt())).thenReturn(0L);
+        when(fileStorageService.salvar(any(MultipartFile.class), anyString())).thenReturn("uploads/arquivo");
+        when(loteRepository.save(any(Lote.class))).thenAnswer(inv -> {
+            Lote l = inv.getArgument(0);
+            l.setId(30L);
+            return l;
+        });
+
+        OcsProcedimento precoTabela = new OcsProcedimento();
+        precoTabela.setValor(new BigDecimal("99.00"));
+        when(ocsProcedimentoRepository.findByOcs_OcsIdAndProcedimento_ProcCodigoDgp(eq(1L), anyString()))
+                .thenReturn(Optional.of(precoTabela));
+
+        String csv = """
+                numero_guia,beneficiario,prec_cp,codigo_tuss,descricao,tipo,quantidade,valor_unitario
+                202610857,WALDIR DE CARVALHO MESSIAS,12300922200,40301427,Capacidade de fixação de ferro,Procedimento,1,11.25
+                202610857,WALDIR DE CARVALHO MESSIAS,12300922200,40301842,Ferro sérico,Procedimento,1,11.25
+                """;
+        MockMultipartFile fatura = new MockMultipartFile("fatura", "fatura.pdf", "application/pdf", new byte[]{1});
+        MockMultipartFile espelho = new MockMultipartFile(
+                "espelho", "espelho.csv", "text/csv", csv.getBytes(StandardCharsets.UTF_8));
+
+        service.gerarLote(List.of(1L), fatura, espelho);
+
+        assertEquals(0, new BigDecimal("15.74").compareTo(guia.getValorContratado()));
+        assertEquals(0, new BigDecimal("22.50").compareTo(guia.getValorFaturado()));
+    }
 }

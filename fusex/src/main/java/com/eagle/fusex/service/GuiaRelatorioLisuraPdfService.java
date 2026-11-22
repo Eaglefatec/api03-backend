@@ -269,7 +269,7 @@ public class GuiaRelatorioLisuraPdfService {
             String revisado = ultima != null ? moeda(ultima.getValorGlosa())
                     : !semPreco && diferenca.signum() == 0 ? moeda(dados.espelho()) : "Sem revisão";
             String[][] caixas = {
-                    {"Contratado (guia)", semPreco ? "Não cadastrado" : moeda(dados.contratado())},
+                    {"Contratado (guia)", semPreco ? "Não identificado" : moeda(dados.contratado())},
                     {"No espelho", moeda(dados.espelho())},
                     {"Diferença", textoDiferenca},
                     {"Valor revisado", revisado}
@@ -355,7 +355,7 @@ public class GuiaRelatorioLisuraPdfService {
             List<Glosa> glosas = dados.glosas();
             if (glosas.isEmpty()) {
                 if (dados.semPrecoContratado()) {
-                    paragrafo(normal, 9, CINZA, "Preço contratado não cadastrado para os procedimentos desta guia. "
+                    paragrafo(normal, 9, CINZA, "Valor contratado não identificado na guia. "
                             + "Valor no espelho: " + moeda(dados.espelho())
                             + ". A conferência de valores precisa ser feita manualmente.");
                     return;

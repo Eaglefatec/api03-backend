@@ -12,6 +12,7 @@ import com.eagle.fusex.storage.FileStorageService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.mock.web.MockMultipartFile;
@@ -19,6 +20,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -77,6 +79,27 @@ class GuiaServiceTest {
 
         assertEquals("202610606", response.getNumeroGuia());
         assertEquals(StatusGuia.SEM_LOTE, response.getStatus());
+    }
+
+    @Test
+    void testAnexarGuia_RegistraValorContratadoDaGuia() throws Exception {
+        when(ocsRepository.findByLoginUsuario("ocs")).thenReturn(Optional.of(ocsLogada));
+        when(guiaRepository.existsByNumeroGuia("202610857")).thenReturn(false);
+        when(fileStorageService.salvar(any(MultipartFile.class), anyString())).thenReturn("uploads/guia.pdf");
+        when(guiaRepository.save(any(Guia.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        byte[] pdf = GuiaValorContratadoPdfServiceTest.pdfComLinhas(
+                "GUIA DE ENCAMINHAMENTO Nr: 202610857 / FUSEX",
+                "Capacidade de fixacao de ferro, dosagem 40301427 1 7,87",
+                "Ferro serico, dosagem 40301842 1 7,87",
+                "Cotista: DAP , ND: 339039 Total: 15,74");
+        MockMultipartFile arquivo = new MockMultipartFile("arquivo", "guia.pdf", "application/pdf", pdf);
+
+        service.anexarGuia("202610857", "12300922200", LocalDate.of(2026, 8, 26), arquivo);
+
+        ArgumentCaptor<Guia> captor = ArgumentCaptor.forClass(Guia.class);
+        verify(guiaRepository).save(captor.capture());
+        assertEquals(0, new BigDecimal("15.74").compareTo(captor.getValue().getValorContratado()));
     }
 
     @Test
