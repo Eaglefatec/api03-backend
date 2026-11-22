@@ -478,4 +478,44 @@ class GuiaAssinaturaServiceTest {
                 DecisaoAssinatura.APROVAR, "med", true, ASSINATURA_PNG_BASE64, null);
         assertThrows(UnauthorizedOperationException.class, () -> service.processarDecisao(15L, reqMedicoComum, authMedicoComum));
     }
+
+    @Test
+    @DisplayName("Deve listar apenas as guias já assinadas pelo próprio usuário logado conforme o perfil")
+    void deveListarGuiasJaAssinadasPorUsuarioEPerfil() {
+        GuiaAssinatura guiaMed = new GuiaAssinatura();
+        guiaMed.setId(21L);
+        guiaMed.setNumeroGuia("202610921");
+        guiaMed.setBeneficiarioNome("Marta S. Lacerda");
+        guiaMed.setOcsNome("Plani Diagnósticos Médicos Ltda");
+        guiaMed.setStatus(StatusEsteiraAssinatura.AGUARDANDO_CHEFE_SECAO);
+        guiaMed.setMedicoChefeUsuario("chefemedico@gmail.com");
+        guiaMed.setDataAssinaturaMedico(LocalDateTime.now().minusHours(2));
+
+        GuiaAssinatura guiaSec = new GuiaAssinatura();
+        guiaSec.setId(22L);
+        guiaSec.setNumeroGuia("202610922");
+        guiaSec.setBeneficiarioNome("Paulo C. Nogueira");
+        guiaSec.setOcsNome("Fisio Vip Clin");
+        guiaSec.setStatus(StatusEsteiraAssinatura.AGUARDANDO_ENVIO_BENEFICIARIO);
+        guiaSec.setChefeSecaoUsuario("chefesessao@gmail.com");
+        guiaSec.setDataAssinaturaSecao(LocalDateTime.now().minusHours(1));
+
+        when(guiaAssinaturaRepository.findByMedicoChefeUsuarioOrderByDataAssinaturaMedicoDesc("chefemedico@gmail.com"))
+                .thenReturn(List.of(guiaMed));
+        when(guiaAssinaturaRepository.findByChefeSecaoUsuarioOrderByDataAssinaturaSecaoDesc("chefesessao@gmail.com"))
+                .thenReturn(List.of(guiaSec));
+
+        Authentication authMed = new UsernamePasswordAuthenticationToken(
+                "chefemedico@gmail.com", "senha123", List.of(new SimpleGrantedAuthority("ROLE_MEDICO_CHEFE")));
+        Authentication authSec = new UsernamePasswordAuthenticationToken(
+                "chefesessao@gmail.com", "senha123", List.of(new SimpleGrantedAuthority("ROLE_CHEFE_SECAO")));
+
+        List<GuiaAssinaturaResponse> assinadasMed = service.listarAssinadas("med", authMed);
+        assertEquals(1, assinadasMed.size());
+        assertEquals("202610921", assinadasMed.get(0).numeroGuia());
+
+        List<GuiaAssinaturaResponse> assinadasSec = service.listarAssinadas("sec", authSec);
+        assertEquals(1, assinadasSec.size());
+        assertEquals("202610922", assinadasSec.get(0).numeroGuia());
+    }
 }

@@ -81,6 +81,13 @@ public class GuiaAssinaturaController {
         return ResponseEntity.ok(guiaAssinaturaService.listarPendencias(perfil, authentication));
     }
 
+    @GetMapping({"/assinadas", "/guias/assinadas"})
+    public ResponseEntity<List<GuiaAssinaturaResponse>> listarAssinadas(
+            @RequestParam(value = "perfil", required = false) String perfil,
+            Authentication authentication) {
+        return ResponseEntity.ok(guiaAssinaturaService.listarAssinadas(perfil, authentication));
+    }
+
     @GetMapping({"/guias/{id:\\d+}", "/guias/{id:\\d+}/detalhes"})
     public ResponseEntity<GuiaAssinaturaDetalheResponse> obterDetalhes(@PathVariable Long id) {
         return ResponseEntity.ok(guiaAssinaturaService.obterDetalhes(id));

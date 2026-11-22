@@ -306,6 +306,21 @@ public class GuiaAssinaturaService {
     }
 
     @Transactional(readOnly = true)
+    public List<GuiaAssinaturaResponse> listarAssinadas(String perfilParam, Authentication auth) {
+        StatusEsteiraAssinatura statusAlvo = resolverStatusAlvoPorPerfilOuRole(perfilParam, auth);
+        String username = auth != null ? auth.getName() : null;
+        if (username == null || username.isBlank()) {
+            return List.of();
+        }
+        List<GuiaAssinatura> assinadas = statusAlvo == StatusEsteiraAssinatura.AGUARDANDO_MEDICO_CHEFE
+                ? guiaAssinaturaRepository.findByMedicoChefeUsuarioOrderByDataAssinaturaMedicoDesc(username)
+                : guiaAssinaturaRepository.findByChefeSecaoUsuarioOrderByDataAssinaturaSecaoDesc(username);
+        return assinadas.stream()
+                .map(g -> toResponse(g, null))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public GuiaAssinaturaDetalheResponse obterDetalhes(Long id) {
         GuiaAssinatura guia = buscarPorId(id);
         List<ProcedimentoGuiaDTO> procedimentos = pdfService.desserializarProcedimentos(guia.getProcedimentosResumo());

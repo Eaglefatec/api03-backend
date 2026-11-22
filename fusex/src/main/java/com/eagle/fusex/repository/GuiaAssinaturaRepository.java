@@ -28,6 +28,10 @@ public interface GuiaAssinaturaRepository extends JpaRepository<GuiaAssinatura, 
 
     List<GuiaAssinatura> findByStatusOrderByDataEnvioEmailDesc(StatusEsteiraAssinatura status);
 
+    List<GuiaAssinatura> findByMedicoChefeUsuarioOrderByDataAssinaturaMedicoDesc(String medicoChefeUsuario);
+
+    List<GuiaAssinatura> findByChefeSecaoUsuarioOrderByDataAssinaturaSecaoDesc(String chefeSecaoUsuario);
+
     Optional<GuiaAssinatura> findByNumeroGuia(String numeroGuia);
 
     boolean existsByNumeroGuia(String numeroGuia);
