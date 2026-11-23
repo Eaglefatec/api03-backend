@@ -23,10 +23,11 @@ public class EncaminhamentoController {
     @PostMapping
     public ResponseEntity<EncaminhamentoResponse> enviarEncaminhamento(
             @RequestParam(value = "medicoId", required = false) Long medicoId,
+            @RequestParam(value = "solicitacaoId", required = false) Long solicitacaoId,
             @RequestParam("arquivo") MultipartFile arquivo) {
 
         Long resolvedMedicoId = medicoId != null ? medicoId : 1L;
-        EncaminhamentoResponse response = encaminhamentoService.enviarEncaminhamento(resolvedMedicoId, arquivo);
+        EncaminhamentoResponse response = encaminhamentoService.enviarEncaminhamento(resolvedMedicoId, solicitacaoId, arquivo);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

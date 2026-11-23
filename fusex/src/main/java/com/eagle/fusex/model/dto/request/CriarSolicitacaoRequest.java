@@ -2,6 +2,7 @@ package com.eagle.fusex.model.dto.request;
 
 import com.eagle.fusex.model.enums.Especialidade;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -13,6 +14,7 @@ import java.util.Set;
 
 public class CriarSolicitacaoRequest {
 
+    @NotNull(message = "medicoId é obrigatório")
     @Positive(message = "medicoId deve ser positivo")
     private Long medicoId;
 
@@ -27,9 +29,18 @@ public class CriarSolicitacaoRequest {
     @Size(max = 10, message = "om deve ter no máximo 10 caracteres")
     private String om;
 
-    @NotBlank(message = "cpfPrec é obrigatório")
-    @Size(max = 20, message = "cpfPrec deve ter no máximo 20 caracteres")
-    private String cpfPrec;
+    @NotBlank(message = "cpf é obrigatório")
+    @Size(max = 14, message = "cpf deve ter no máximo 14 caracteres")
+    private String cpf;
+
+    @NotBlank(message = "prec é obrigatório")
+    @Size(max = 30, message = "prec deve ter no máximo 30 caracteres")
+    private String prec;
+
+    @NotBlank(message = "email é obrigatório")
+    @Email(message = "email deve ser um endereço de e-mail válido")
+    @Size(max = 255, message = "email deve ter no máximo 255 caracteres")
+    private String email;
 
     @NotEmpty(message = "especialidades não pode estar vazio")
     private Set<Especialidade> especialidades;
@@ -110,12 +121,41 @@ public class CriarSolicitacaoRequest {
         this.om = om;
     }
 
+    public String getCpf() {
+        return cpf;
+    }
+
+    public void setCpf(String cpf) {
+        this.cpf = cpf;
+    }
+
+    public String getPrec() {
+        return prec;
+    }
+
+    public void setPrec(String prec) {
+        this.prec = prec;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public String getCpfPrec() {
-        return cpfPrec;
+        if (cpf == null && prec == null) return null;
+        if (cpf != null && prec != null && !cpf.equals(prec) && !prec.isBlank()) return cpf + " / " + prec;
+        return (cpf != null && !cpf.isBlank()) ? cpf : prec;
     }
 
     public void setCpfPrec(String cpfPrec) {
-        this.cpfPrec = cpfPrec;
+        if (cpfPrec != null) {
+            if (this.cpf == null) this.cpf = cpfPrec;
+            if (this.prec == null) this.prec = cpfPrec;
+        }
     }
 
     public Set<Especialidade> getEspecialidades() {

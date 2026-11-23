@@ -59,8 +59,10 @@ public class PreGuiaConsolidadaService {
 
         PreGuiaConsolidadaResponse.Beneficiario beneficiario = new PreGuiaConsolidadaResponse.Beneficiario(
                 paciente.getNome(),
-                    paciente.getIdade(),
-                paciente.getCpfPrec(),
+                paciente.getIdade(),
+                paciente.getCpf(),
+                paciente.getPrec(),
+                paciente.getEmail(),
                 paciente.getTelefone()
         );
 

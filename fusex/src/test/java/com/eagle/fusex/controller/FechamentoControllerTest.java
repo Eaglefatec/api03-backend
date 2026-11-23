@@ -45,7 +45,7 @@ class FechamentoControllerTest {
     @DisplayName("POST /fechamentos - Deve retornar 403 FORBIDDEN para papel não autorizado")
     void deveRetornar403ParaPapelNaoAutorizado() throws Exception {
         mockMvc.perform(post("/fechamentos")
-                        .with(httpBasic("medico", "senha123"))
+                        .with(httpBasic("medico@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"competenciaAno\":2026,\"competenciaMes\":10}"))
                 .andExpect(status().isForbidden());
@@ -59,7 +59,7 @@ class FechamentoControllerTest {
         when(fechamentoService.enviarFechamento(2026, 10)).thenReturn(response);
 
         mockMvc.perform(post("/fechamentos")
-                        .with(httpBasic("ocs", "senha123"))
+                        .with(httpBasic("ocs@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"competenciaAno\":2026,\"competenciaMes\":10}"))
                 .andExpect(status().isCreated())
@@ -74,7 +74,7 @@ class FechamentoControllerTest {
                 StatusFechamento.AGUARDANDO_FATURAMENTO, 2, 5);
         when(fechamentoService.listarFechamentos()).thenReturn(List.of(response));
 
-        mockMvc.perform(get("/fechamentos").with(httpBasic("ocs", "senha123")))
+        mockMvc.perform(get("/fechamentos").with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].competenciaMes").value(10));
     }

@@ -17,4 +17,7 @@ public interface GuiaRepository extends JpaRepository<Guia, Long> {
 
     @Query("SELECT g FROM Guia g WHERE g.ocs.ocsId = :ocsId")
     List<Guia> findByOcs_Id(@Param("ocsId") Long ocsId);
+
+    @Query("SELECT g FROM Guia g WHERE g.lote.fechamento.id = :fechamentoId")
+    List<Guia> findByFechamentoId(@Param("fechamentoId") Long fechamentoId);
 }

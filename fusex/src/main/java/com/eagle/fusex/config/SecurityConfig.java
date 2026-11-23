@@ -1,6 +1,5 @@
 package com.eagle.fusex.config;
 
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -24,98 +23,146 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        public static final String EMAIL_MEDICO = "medico@gmail.com";
+        public static final String EMAIL_EG = "eg@gmail.com";
+        public static final String EMAIL_MEDICO_CHEFE = "chefemedico@gmail.com";
+        public static final String EMAIL_CHEFE_SECAO = "chefesessao@gmail.com";
+        public static final String EMAIL_OCS = "ocs@gmail.com";
+        public static final String EMAIL_FATURAMENTO = "faturamento@gmail.com";
+        public static final String EMAIL_ADMIN = "admin@gmail.com";
+        public static final String EMAIL_LISURA = "lisura@gmail.com";
 
-    @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails medico = User.builder()
-                .username("medico")
-                .password(passwordEncoder().encode("senha123"))
-                .roles("MEDICO")
-                .build();
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-        UserDetails emissorGuia = User.builder()
-                .username("eg")
-                .password(passwordEncoder().encode("senha123"))
-                .roles("EG")
-                .build();
+        @Bean
+        public UserDetailsService userDetailsService() {
+                UserDetails medico = User.builder()
+                        .username(EMAIL_MEDICO)
+                        .password(passwordEncoder().encode("senha123"))
+                        .roles("MEDICO")
+                        .build();
 
-        UserDetails admin = User.builder()
-                .username("admin")
-                .password(passwordEncoder().encode("admin123"))
-                .roles("ADMIN", "MEDICO", "EG")
-                .build();
+                UserDetails emissorGuia = User.builder()
+                        .username(EMAIL_EG)
+                        .password(passwordEncoder().encode("senha123"))
+                        .roles("EG")
+                        .build();
 
-        UserDetails ocs = User.builder()
-                .username("ocs")
-                .password(passwordEncoder().encode("senha123"))
-                .roles("OCS")
-                .build();
+                UserDetails medicoChefe = User.builder()
+                        .username(EMAIL_MEDICO_CHEFE)
+                        .password(passwordEncoder().encode("senha123"))
+                        .roles("MEDICO_CHEFE")
+                        .build();
 
-        UserDetails faturamento = User.builder()
-                .username("faturamento")
-                .password(passwordEncoder().encode("senha123"))
-                .roles("FATURAMENTO")
-                .build();
+                UserDetails chefeSecao = User.builder()
+                        .username(EMAIL_CHEFE_SECAO)
+                        .password(passwordEncoder().encode("senha123"))
+                        .roles("CHEFE_SECAO")
+                        .build();
 
-        return new InMemoryUserDetailsManager(medico, emissorGuia, admin, ocs, faturamento);
-    }
+                UserDetails admin = User.builder()
+                        .username(EMAIL_ADMIN)
+                        .password(passwordEncoder().encode("admin123"))
+                        .roles("ADMIN", "MEDICO", "EG", "MEDICO_CHEFE", "CHEFE_SECAO", "LISURA")
+                        .build();
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+                UserDetails ocs = User.builder()
+                        .username(EMAIL_OCS)
+                        .password(passwordEncoder().encode("senha123"))
+                        .roles("OCS")
+                        .build();
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
+                UserDetails faturamento = User.builder()
+                        .username(EMAIL_FATURAMENTO)
+                        .password(passwordEncoder().encode("senha123"))
+                        .roles("FATURAMENTO")
+                        .build();
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(Customizer.withDefaults())
-                .csrf(AbstractHttpConfigurer::disable)
-                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-                .authorizeHttpRequests((authorize) -> authorize
-                        .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/solicitacoes/publico/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/procedimentos/**", "/ocs/**", "/medicos/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/solicitacoes").hasAnyRole("MEDICO", "ADMIN")
-                        .requestMatchers("/pacientes", "/pacientes/**").hasAnyRole("MEDICO", "ADMIN")
-                        .requestMatchers("/auth/**").authenticated()
-                        .requestMatchers("/solicitacoes/*/pre-guia").hasAnyRole("EG", "MEDICO", "ADMIN")
-                        .requestMatchers("/solicitacoes/*/guia-pdf", "/solicitacoes/*/guia-pdf/**").hasAnyRole("EG", "ADMIN")
-                        .requestMatchers("/guias/*/validade").hasAnyRole("OCS", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/guias").hasAnyRole("OCS", "ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/guias").hasAnyRole("OCS", "ADMIN")
-                        .requestMatchers("/lotes/**").hasAnyRole("OCS", "ADMIN")
-                        .requestMatchers("/fechamentos/**").hasAnyRole("OCS", "ADMIN")
-                        .requestMatchers("/faturamento/**").hasAnyRole("FATURAMENTO", "ADMIN")
-                        .requestMatchers("/encaminhamentos/**").hasAnyRole("MEDICO", "ADMIN")
-                        .requestMatchers("/importacao/**").hasRole("ADMIN")
-                        .requestMatchers(
-                                "/",
-                                "/*.html",
-                                "/css/**",
-                                "/js/**",
-                                "/images/**",
-                                "/favicon.ico",
-                                "/static/**",
-                                "/error"
-                        ).permitAll()
-                        .anyRequest().authenticated()
-                )
+                UserDetails lisura = User.builder()
+                        .username(EMAIL_LISURA)
+                        .password(passwordEncoder().encode("senha123"))
+                        .roles("LISURA")
+                        .build();
 
-                .httpBasic(Customizer.withDefaults());
+                return new InMemoryUserDetailsManager(
+                        medico, emissorGuia, medicoChefe, chefeSecao, admin, ocs, faturamento, lisura
+                );
+        }
 
-        return http.build();
-    }
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration config = new CorsConfiguration();
+                config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+                config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+                config.setAllowedHeaders(List.of("*"));
+                config.setAllowCredentials(true);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", config);
+                return source;
+        }
+
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http
+                        .cors(Customizer.withDefaults())
+                        .csrf(AbstractHttpConfigurer::disable)
+                        .headers(headers -> headers.frameOptions(
+                                HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+                        .authorizeHttpRequests((authorize) -> authorize
+                                .requestMatchers("/h2-console/**").permitAll()
+                                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                                .requestMatchers("/solicitacoes/publico/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/procedimentos/**", "/ocs/**", "/medicos/**").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/solicitacoes", "/solicitacoes/*/reenviar-email")
+                                .hasAnyRole("MEDICO", "ADMIN")
+                                .requestMatchers("/pacientes", "/pacientes/**")
+                                .hasAnyRole("MEDICO", "ADMIN")
+                                .requestMatchers("/auth/**").authenticated()
+                                .requestMatchers("/solicitacoes/*/pre-guia")
+                                .hasAnyRole("EG", "MEDICO", "ADMIN")
+                                .requestMatchers("/pre-guias", "/pre-guias/**")
+                                .hasAnyRole("EG", "ADMIN")
+                                .requestMatchers("/solicitacoes/*/guia-pdf", "/solicitacoes/*/guia-pdf/**")
+                                .hasAnyRole("EG", "ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/assinaturas/guias", "/assinaturas/guias/*/enviar-email")
+                                .hasAnyRole("EG", "ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/assinaturas/prontas-envio",
+                                        "/assinaturas/guias/prontas-envio",
+                                        "/assinaturas/enviadas", "/assinaturas/guias/enviadas")
+                                .hasAnyRole("EG", "ADMIN")
+                                .requestMatchers("/assinaturas/pendencias", "/assinaturas/guias/pendencias",
+                                        "/assinaturas/assinadas", "/assinaturas/guias/assinadas",
+                                        "/assinaturas/guias/*/decisao", "/assinaturas/guias/*/assinar")
+                                .hasAnyRole("MEDICO_CHEFE", "CHEFE_SECAO", "ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/assinaturas/guias", "/assinaturas/painel",
+                                        "/assinaturas/guias/*", "/assinaturas/guias/*/**")
+                                .hasAnyRole("EG", "MEDICO_CHEFE", "CHEFE_SECAO", "ADMIN")
+                                .requestMatchers("/guias/*/validade").hasAnyRole("OCS", "ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/guias").hasAnyRole("OCS", "ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/guias").hasAnyRole("OCS", "ADMIN")
+                                .requestMatchers("/lotes/**").hasAnyRole("OCS", "ADMIN")
+                                .requestMatchers("/fechamentos/**").hasAnyRole("OCS", "ADMIN")
+                                .requestMatchers("/faturamento/**").hasAnyRole("FATURAMENTO", "ADMIN")
+                                .requestMatchers("/encaminhamentos/**").hasAnyRole("MEDICO", "ADMIN")
+                                .requestMatchers("/importacao/**").hasRole("ADMIN")
+                                .requestMatchers("/lisura/**").hasAnyRole("LISURA", "ADMIN")
+                                .requestMatchers(
+                                        "/",
+                                        "/*.html",
+                                        "/css/**",
+                                        "/js/**",
+                                        "/images/**",
+                                        "/favicon.ico",
+                                        "/static/**",
+                                        "/error")
+                                .permitAll()
+                                .anyRequest().authenticated())
+                        .httpBasic(Customizer.withDefaults());
+
+                return http.build();
+        }
 }

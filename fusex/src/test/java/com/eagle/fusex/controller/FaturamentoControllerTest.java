@@ -52,7 +52,7 @@ class FaturamentoControllerTest {
     @Test
     @DisplayName("GET /faturamento/fechamentos - Deve retornar 403 para a OCS")
     void deveRetornar403ParaOcs() throws Exception {
-        mockMvc.perform(get("/faturamento/fechamentos").with(httpBasic("ocs", "senha123")))
+        mockMvc.perform(get("/faturamento/fechamentos").with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isForbidden());
     }
 
@@ -62,7 +62,7 @@ class FaturamentoControllerTest {
         when(faturamentoService.listarFechamentosPendentes())
                 .thenReturn(List.of(fechamentoResponse(StatusFechamento.AGUARDANDO_FATURAMENTO)));
 
-        mockMvc.perform(get("/faturamento/fechamentos").with(httpBasic("faturamento", "senha123")))
+        mockMvc.perform(get("/faturamento/fechamentos").with(httpBasic("faturamento@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].ocsNome").value("Plani Diagnósticos"))
                 .andExpect(jsonPath("$[0].status").value("AGUARDANDO_FATURAMENTO"));
@@ -72,7 +72,7 @@ class FaturamentoControllerTest {
     @DisplayName("POST /faturamento/fechamentos/{id}/confirmar - Deve retornar 403 para a Lisura/OCS")
     void deveRetornar403AoConfirmarComOcs() throws Exception {
         mockMvc.perform(post("/faturamento/fechamentos/10/confirmar")
-                        .with(httpBasic("ocs", "senha123"))
+                        .with(httpBasic("ocs@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(CORPO_VALIDO))
                 .andExpect(status().isForbidden());
@@ -85,7 +85,7 @@ class FaturamentoControllerTest {
                 .thenReturn(fechamentoResponse(StatusFechamento.AGUARDANDO_LISURA));
 
         mockMvc.perform(post("/faturamento/fechamentos/10/confirmar")
-                        .with(httpBasic("faturamento", "senha123"))
+                        .with(httpBasic("faturamento@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(CORPO_VALIDO))
                 .andExpect(status().isOk())
@@ -96,7 +96,7 @@ class FaturamentoControllerTest {
     @DisplayName("POST /faturamento/fechamentos/{id}/confirmar - Deve retornar 400 sem lotes")
     void deveRetornar400SemLotes() throws Exception {
         mockMvc.perform(post("/faturamento/fechamentos/10/confirmar")
-                        .with(httpBasic("faturamento", "senha123"))
+                        .with(httpBasic("faturamento@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"lotes\":[]}"))
                 .andExpect(status().isBadRequest());
@@ -108,7 +108,7 @@ class FaturamentoControllerTest {
         when(faturamentoService.obterFatura(1L))
                 .thenReturn(new ArquivoLoteDownload(new byte[]{37, 80, 68, 70}, "fatura.pdf", "application/pdf"));
 
-        mockMvc.perform(get("/faturamento/lotes/1/fatura").with(httpBasic("faturamento", "senha123")))
+        mockMvc.perform(get("/faturamento/lotes/1/fatura").with(httpBasic("faturamento@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
     }

@@ -35,17 +35,25 @@ public class PacienteService {
 
     @Transactional
     public PacienteResponse cadastrarPaciente(CadastrarPacienteRequest request) {
-        Paciente paciente = pacienteRepository.findByCpfPrec(request.getCpfPrec().trim())
+        String cpfNormalizado = Paciente.normalizarCpf(request.getCpf());
+        String precTrim = request.getPrec() != null ? request.getPrec().trim() : "";
+
+        Paciente paciente = pacienteRepository.findByCpfOrPrec(cpfNormalizado, precTrim)
                 .orElseGet(() -> new Paciente(
                         request.getNome().trim(),
-                        request.getCpfPrec().trim(),
+                        cpfNormalizado,
+                        precTrim,
                         request.getOm().trim(),
+                        request.getEmail().trim(),
                         request.getIdade(),
                         request.getTelefone()
                 ));
 
         paciente.setNome(request.getNome().trim());
+        paciente.setCpf(cpfNormalizado);
+        paciente.setPrec(precTrim);
         paciente.setOm(request.getOm().trim());
+        paciente.setEmail(request.getEmail().trim());
         if (request.getIdade() != null) {
             paciente.setIdade(request.getIdade());
         }
@@ -64,6 +72,15 @@ public class PacienteService {
     }
 
     private PacienteResponse toResponse(Paciente p) {
-        return new PacienteResponse(p.getId(), p.getNome(), p.getOm(), p.getCpfPrec(), p.getIdade(), p.getTelefone());
+        return new PacienteResponse(
+                p.getId(),
+                p.getNome(),
+                p.getOm(),
+                p.getCpf(),
+                p.getPrec(),
+                p.getEmail(),
+                p.getIdade(),
+                p.getTelefone()
+        );
     }
 }

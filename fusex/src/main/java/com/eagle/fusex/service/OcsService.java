@@ -10,6 +10,8 @@ import com.eagle.fusex.repository.OcsRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -28,6 +30,17 @@ public class OcsService {
     public List<OcsResponse> listarPorProcedimento(String procedimentoId) {
         return ocsProcedimentoRepository.findByProcedimento_ProcCodigoDgp(procedimentoId).stream()
                 .map(this::toOcsResponseComValor)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<OcsResponse> listarPorProcedimentos(Collection<String> codigosProcedimentos) {
+        if (codigosProcedimentos == null || codigosProcedimentos.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<String> unicos = new java.util.LinkedHashSet<>(codigosProcedimentos);
+        return ocsRepository.findOcsQueAtendemTodosProcedimentos(codigosProcedimentos, unicos.size()).stream()
+                .map(OcsResponse::from)
                 .toList();
     }
 

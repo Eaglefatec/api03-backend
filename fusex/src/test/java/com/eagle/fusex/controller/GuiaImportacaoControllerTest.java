@@ -47,7 +47,7 @@ class GuiaImportacaoControllerTest {
 
         mockMvc.perform(multipart("/solicitacoes/token-1/guia-pdf")
                         .file(arquivo)
-                        .with(httpBasic("ocs", "senha123")))
+                        .with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isForbidden());
     }
 
@@ -61,7 +61,7 @@ class GuiaImportacaoControllerTest {
 
         mockMvc.perform(multipart("/solicitacoes/token-1/guia-pdf")
                         .file(arquivo)
-                        .with(httpBasic("eg", "senha123")))
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.numeroGuia").value("ABC-123"))
                 .andExpect(jsonPath("$.numeroIdentificado").value(true));
@@ -75,7 +75,7 @@ class GuiaImportacaoControllerTest {
         when(guiaImportacaoService.corrigirNumeroGuia("token-1", "XYZ-999")).thenReturn(response);
 
         mockMvc.perform(patch("/solicitacoes/token-1/guia-pdf/numero")
-                        .with(httpBasic("eg", "senha123"))
+                        .with(httpBasic("eg@gmail.com", "senha123"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"numeroGuia\":\"XYZ-999\"}"))
                 .andExpect(status().isOk())

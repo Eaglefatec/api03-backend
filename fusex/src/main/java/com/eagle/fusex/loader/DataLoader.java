@@ -29,8 +29,8 @@ public class DataLoader implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         if (medicoRepository.count() == 0) {
-            Medico medico1 = new Medico("Dr. João Silva", "123456", true);
-            Medico medico2 = new Medico("Dra. Maria Santos", "654321", false);
+            Medico medico1 = new Medico("Médico", "123456", true);
+            Medico medico2 = new Medico("Médico Não Credenciado", "654321", false);
 
             medicoRepository.save(medico1);
             medicoRepository.save(medico2);
@@ -38,18 +38,41 @@ public class DataLoader implements CommandLineRunner {
             log.info("Médicos de teste inseridos com sucesso!");
         }
 
-        if (pacienteRepository.count() == 0) {
-            Paciente paciente = new Paciente("Sargento Carlos Silva", "11122233344", "DCT", 38, "(11) 98765-4321");
-            pacienteRepository.save(paciente);
-            log.info("Paciente padrão '{}' inserido com sucesso!", paciente.getNome());
+        garantirPaciente("Sargento Carlos Silva", "11122233344", "11122233344", "DCT", "paciente@fusex.eb.mil.br", 38, "(11) 98765-4321");
+        garantirPaciente("WALDIR DE CARVALHO MESSIAS", "12300922200", "12300922200", "FUSEX", "waldir.messias@fusex.eb.mil.br", 45, "(12) 98888-1111");
+        garantirPaciente("ANDRÉ LUÍS QUIRINO DE ALMEIDA", "12435976600", "12435976600", "FUSEX", "andre.almeida@fusex.eb.mil.br", 48, "(12) 98888-2222");
+        garantirPaciente("ROSANA TICIANELLI PINTO", "98223010000", "98223010000", "FUSEX", "rosana.pinto@fusex.eb.mil.br", 62, "(12) 98888-3333");
+
+        var ocsExistente = ocsRepository.findByOcsInscricaoFederal("07.185.057/0001-51")
+                .or(() -> ocsRepository.findByOcsNome("CENTRO DIAGNÓSTICO ANDRADE LTDA"));
+
+        if (ocsExistente.isEmpty()) {
+            com.eagle.fusex.model.entity.Ocs ocsAndrade = new com.eagle.fusex.model.entity.Ocs();
+            ocsAndrade.setOcsNome("CENTRO DIAGNÓSTICO ANDRADE LTDA");
+            ocsAndrade.setOcsInscricaoFederal("07.185.057/0001-51");
+            ocsRepository.save(ocsAndrade);
+        } else {
+            com.eagle.fusex.model.entity.Ocs ocs = ocsExistente.get();
+            if (!"CENTRO DIAGNÓSTICO ANDRADE LTDA".equals(ocs.getOcsNome())) {
+                ocs.setOcsNome("CENTRO DIAGNÓSTICO ANDRADE LTDA");
+                ocsRepository.save(ocs);
+            }
         }
 
-        if (ocsRepository.findByLoginUsuario("ocs").isEmpty()) {
+        if (ocsRepository.findByLoginUsuario("ocs@gmail.com").isEmpty()) {
             ocsRepository.findFirstByOrderByOcsIdAsc().ifPresent(ocs -> {
-                ocs.setLoginUsuario("ocs");
+                ocs.setLoginUsuario("ocs@gmail.com");
                 ocsRepository.save(ocs);
-                log.info("Usuário 'ocs' vinculado à OCS '{}'", ocs.getOcsNome());
+                log.info("Usuário 'ocs@gmail.com' vinculado à OCS '{}'", ocs.getOcsNome());
             });
+        }
+    }
+
+    private void garantirPaciente(String nome, String cpf, String prec, String om, String email, Integer idade, String telefone) {
+        if (pacienteRepository.findByCpfPrec(prec).isEmpty() && pacienteRepository.findByCpfPrec(cpf).isEmpty()) {
+            Paciente p = new Paciente(nome, cpf, prec, om, email, idade, telefone);
+            pacienteRepository.save(p);
+            log.info("Paciente '{}' (Prec {}) cadastrado com sucesso!", nome, prec);
         }
     }
 }

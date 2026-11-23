@@ -51,7 +51,7 @@ class LoteControllerTest {
         mockMvc.perform(multipart("/lotes")
                         .file(fatura).file(espelho)
                         .param("guiaIds", "1")
-                        .with(httpBasic("medico", "senha123")))
+                        .with(httpBasic("medico@gmail.com", "senha123")))
                 .andExpect(status().isForbidden());
     }
 
@@ -67,7 +67,7 @@ class LoteControllerTest {
         mockMvc.perform(multipart("/lotes")
                         .file(fatura).file(espelho)
                         .param("guiaIds", "1", "2")
-                        .with(httpBasic("ocs", "senha123")))
+                        .with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.numeroLote").value(1))
                 .andExpect(jsonPath("$.quantidadeGuias").value(2));
@@ -80,7 +80,7 @@ class LoteControllerTest {
                 "fatura.pdf", "espelho.pdf", 2);
         when(loteService.listarLotes()).thenReturn(List.of(response));
 
-        mockMvc.perform(get("/lotes").with(httpBasic("ocs", "senha123")))
+        mockMvc.perform(get("/lotes").with(httpBasic("ocs@gmail.com", "senha123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].numeroLote").value(1));
     }
