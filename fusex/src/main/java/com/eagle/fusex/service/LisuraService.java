@@ -79,8 +79,21 @@ public class LisuraService {
             long quantidadeGuias = lotes.stream()
                     .mapToLong(lote -> guiaRepository.countByLoteId(lote.getId()))
                     .sum();
+            long quantidadeGlosas = 0L;
+            if (glosaRepository != null && f.getId() != null) {
+                List<Guia> guiasFechamento = guiaRepository.findByFechamentoId(f.getId());
+                if (guiasFechamento != null) {
+                    for (Guia g : guiasFechamento) {
+                        List<Glosa> glosasGuia = glosaRepository.findByGuiaId(g.getId());
+                        if (glosasGuia != null) {
+                            quantidadeGlosas += glosasGuia.size();
+                        }
+                    }
+                }
+            }
             map.put("quantidadeLotes", lotes.size());
             map.put("quantidadeGuias", quantidadeGuias);
+            map.put("quantidadeGlosas", quantidadeGlosas);
 
             Map<String, Object> ocsMap = new HashMap<>();
             if (f.getOcs() != null) {
@@ -132,13 +145,7 @@ public class LisuraService {
             return new ArrayList<>();
         }
 
-        Long ocsId = fechamento.getOcs().getOcsId();
-
         List<Guia> guias = guiaRepository.findByFechamentoId(fechamentoId);
-        if (guias == null || guias.isEmpty()) {
-            guias = guiaRepository.findByOcs_Id(ocsId);
-        }
-
         if (guias == null || guias.isEmpty()) {
             return new ArrayList<>();
         }

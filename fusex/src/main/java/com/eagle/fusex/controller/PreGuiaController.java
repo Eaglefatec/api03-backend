@@ -42,21 +42,50 @@ public class PreGuiaController {
     }
 
     @PostMapping(value = "/{token}/guia-assinatura", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<GuiaAssinaturaResponse> enviarParaAssinatura(@PathVariable String token,
-                                                                       @RequestParam("arquivo") MultipartFile arquivo) {
+    public ResponseEntity<GuiaAssinaturaResponse> enviarParaAssinatura(
+            @PathVariable String token,
+            @RequestParam("arquivo") MultipartFile arquivo,
+            @RequestParam(value = "confirmarCadastro", required = false, defaultValue = "false") boolean confirmarCadastro,
+            @RequestParam(value = "pacienteNome", required = false) String pacienteNome,
+            @RequestParam(value = "pacienteCpf", required = false) String pacienteCpf,
+            @RequestParam(value = "pacientePrec", required = false) String pacientePrec,
+            @RequestParam(value = "pacienteOm", required = false) String pacienteOm,
+            @RequestParam(value = "pacienteEmail", required = false) String pacienteEmail,
+            @RequestParam(value = "pacienteTelefone", required = false) String pacienteTelefone,
+            @RequestParam(value = "pacienteIdade", required = false) Integer pacienteIdade) {
+        if (confirmarCadastro) {
+            com.eagle.fusex.model.dto.request.CadastroPacienteConfirmacaoDTO confirmacao =
+                    new com.eagle.fusex.model.dto.request.CadastroPacienteConfirmacaoDTO(
+                            true, pacienteNome, pacienteCpf, pacientePrec, pacienteOm,
+                            pacienteEmail, pacienteTelefone, pacienteIdade);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(preGuiaService.enviarParaAssinatura(token, arquivo, confirmacao));
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(preGuiaService.enviarParaAssinatura(token, arquivo));
     }
 
     @GetMapping("/{token}/encaminhamento")
     public ResponseEntity<byte[]> abrirEncaminhamento(@PathVariable String token) {
         ArquivoLoteDownload arquivo = preGuiaService.abrirEncaminhamento(token);
-        MediaType tipo = arquivo.tipo() != null ? MediaType.parseMediaType(arquivo.tipo()) : MediaType.APPLICATION_PDF;
+        MediaType tipo = resolverMediaTypeSeguro(arquivo.tipo());
         ContentDisposition disposicao = ContentDisposition.inline()
-                .filename(arquivo.nome(), StandardCharsets.UTF_8)
+                .filename(arquivo.nome() != null ? arquivo.nome() : "encaminhamento", StandardCharsets.UTF_8)
                 .build();
         return ResponseEntity.ok()
                 .contentType(tipo)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposicao.toString())
+                .header("X-Content-Type-Options", "nosniff")
                 .body(arquivo.conteudo());
+    }
+
+    private MediaType resolverMediaTypeSeguro(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return MediaType.APPLICATION_PDF;
+        }
+        String limpo = raw.trim().toLowerCase();
+        if (limpo.equals("application/pdf")) return MediaType.APPLICATION_PDF;
+        if (limpo.equals("image/png")) return MediaType.IMAGE_PNG;
+        if (limpo.equals("image/jpeg") || limpo.equals("image/jpg")) return MediaType.IMAGE_JPEG;
+        return MediaType.APPLICATION_OCTET_STREAM;
     }
 }

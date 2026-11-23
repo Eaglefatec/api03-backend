@@ -55,6 +55,7 @@ class GuiaAssinaturaControllerTest {
                 LocalDate.now().plusDays(60),
                 null,
                 StatusEmail.SIMULADO,
+                null,
                 "Mensagem pronta",
                 "Operação realizada"
         );
@@ -189,6 +190,33 @@ class GuiaAssinaturaControllerTest {
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/assinaturas/prontas-envio")
                         .with(httpBasic("chefemedico@gmail.com", "senha123")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /assinaturas/guias/assinadas - Deve listar guias já assinadas para Médico Chefe e Chefe da Seção e bloquear EG")
+    void deveListarGuiasJaAssinadasParaAssinantesEBloquearEg() throws Exception {
+        GuiaAssinaturaResponse respAs = criarResponseExemplo(2L, "202610702", StatusEsteiraAssinatura.AGUARDANDO_CHEFE_SECAO);
+        GuiaAssinaturaResponse respPe = criarResponseExemplo(3L, "202610703", StatusEsteiraAssinatura.AGUARDANDO_ENVIO_BENEFICIARIO);
+        when(guiaAssinaturaService.listarAssinadas(eq("med"), any())).thenReturn(List.of(respAs));
+        when(guiaAssinaturaService.listarAssinadas(eq("sec"), any())).thenReturn(List.of(respPe));
+
+        mockMvc.perform(get("/assinaturas/guias/assinadas")
+                        .param("perfil", "med")
+                        .with(httpBasic("chefemedico@gmail.com", "senha123")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].numeroGuia").value("202610702"))
+                .andExpect(jsonPath("$[0].statusCodigo").value("AS"));
+
+        mockMvc.perform(get("/assinaturas/assinadas")
+                        .param("perfil", "sec")
+                        .with(httpBasic("chefesessao@gmail.com", "senha123")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].numeroGuia").value("202610703"))
+                .andExpect(jsonPath("$[0].statusCodigo").value("PE"));
+
+        mockMvc.perform(get("/assinaturas/guias/assinadas")
+                        .with(httpBasic("eg@gmail.com", "senha123")))
                 .andExpect(status().isForbidden());
     }
 }

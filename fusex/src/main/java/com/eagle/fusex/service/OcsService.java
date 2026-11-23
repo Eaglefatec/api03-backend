@@ -38,7 +38,8 @@ public class OcsService {
         if (codigosProcedimentos == null || codigosProcedimentos.isEmpty()) {
             return Collections.emptyList();
         }
-        return ocsRepository.findOcsQueAtendemTodosProcedimentos(codigosProcedimentos, codigosProcedimentos.size()).stream()
+        Set<String> unicos = new java.util.LinkedHashSet<>(codigosProcedimentos);
+        return ocsRepository.findOcsQueAtendemTodosProcedimentos(codigosProcedimentos, unicos.size()).stream()
                 .map(OcsResponse::from)
                 .toList();
     }

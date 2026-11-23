@@ -135,6 +135,7 @@ public class SecurityConfig {
                                         "/assinaturas/enviadas", "/assinaturas/guias/enviadas")
                                 .hasAnyRole("EG", "ADMIN")
                                 .requestMatchers("/assinaturas/pendencias", "/assinaturas/guias/pendencias",
+                                        "/assinaturas/assinadas", "/assinaturas/guias/assinadas",
                                         "/assinaturas/guias/*/decisao", "/assinaturas/guias/*/assinar")
                                 .hasAnyRole("MEDICO_CHEFE", "CHEFE_SECAO", "ADMIN")
                                 .requestMatchers(HttpMethod.GET, "/assinaturas/guias", "/assinaturas/painel",

@@ -1,5 +1,6 @@
 package com.eagle.fusex.model.dto.request;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -24,6 +25,7 @@ public class PreencherTriagemRequest {
     private Long ocsId;
 
     @NotNull(message = "aceitoTermos é obrigatório")
+    @AssertTrue(message = "É obrigatório aceitar os termos")
     private Boolean aceitoTermos;
 
     public PreencherTriagemRequest() {

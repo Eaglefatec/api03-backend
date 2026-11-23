@@ -49,31 +49,32 @@ public class EmailRetryScheduler {
 
         for (SolicitacaoMedica solicitacao : pendentes) {
             try {
-                int tentativas = (solicitacao.getEmailTentativas() != null ? solicitacao.getEmailTentativas() : 0) + 1;
+                Integer tentativasAtuais = solicitacao.getEmailTentativas();
+                int tentativas = (tentativasAtuais != null ? tentativasAtuais : 0) + 1;
                 solicitacao.setEmailTentativas(tentativas);
 
                 ResultadoEnvioEmail resultado = emailService.enviarEmailSolicitacao(solicitacao);
 
                 if (resultado.sucesso()) {
                     solicitacao.setStatusEmail(StatusEmail.ENVIADO);
-                    solicitacao.setEmailUltimoErro(resultado.mensagem());
+                    solicitacao.setEmailUltimoErro(truncar(resultado.mensagem()));
                     solicitacao.setEmailProximaTentativa(null);
                     log.info("E-mail da solicitação #{} reenviado com sucesso na tentativa {}", solicitacao.getId(), tentativas);
                 } else if (resultado.status() == StatusEmail.PENDENTE_REENVIO) {
                     if (tentativas >= MAX_TENTATIVAS) {
                         solicitacao.setStatusEmail(StatusEmail.FALHA_ENVIO);
-                        solicitacao.setEmailUltimoErro("Limite de " + MAX_TENTATIVAS + " tentativas excedido: " + resultado.mensagem());
+                        solicitacao.setEmailUltimoErro(truncar("Limite de " + MAX_TENTATIVAS + " tentativas excedido: " + resultado.mensagem()));
                         solicitacao.setEmailProximaTentativa(null);
                         log.warn("Solicitação #{} atingiu limite de retentativas de e-mail e foi marcada como FALHA_ENVIO", solicitacao.getId());
                     } else {
                         long minutosEspera = (long) tentativas * 2;
                         solicitacao.setEmailProximaTentativa(LocalDateTime.now().plusMinutes(minutosEspera));
-                        solicitacao.setEmailUltimoErro(resultado.mensagem());
-                        log.info("Tentativa {} falhou para solicitação #{}. Próxima retentativa em {} min", solicitacao.getId(), tentativas, minutosEspera);
+                        solicitacao.setEmailUltimoErro(truncar(resultado.mensagem()));
+                        log.info("Tentativa {} falhou para solicitação #{}. Próxima retentativa em {} min", tentativas, solicitacao.getId(), minutosEspera);
                     }
                 } else {
                     solicitacao.setStatusEmail(resultado.status());
-                    solicitacao.setEmailUltimoErro(resultado.mensagem());
+                    solicitacao.setEmailUltimoErro(truncar(resultado.mensagem()));
                     solicitacao.setEmailProximaTentativa(null);
                 }
 
@@ -82,6 +83,11 @@ public class EmailRetryScheduler {
                 log.error("Erro inesperado ao reprocessar e-mail da solicitação #{}", solicitacao.getId(), e);
             }
         }
+    }
+
+    private String truncar(String msg) {
+        if (msg == null) return null;
+        return msg.length() <= 500 ? msg : msg.substring(0, 500);
     }
 }
 

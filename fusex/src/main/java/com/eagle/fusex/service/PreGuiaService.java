@@ -92,6 +92,12 @@ public class PreGuiaService {
 
     @Transactional
     public GuiaAssinaturaResponse enviarParaAssinatura(String token, MultipartFile arquivo) {
+        return enviarParaAssinatura(token, arquivo, null);
+    }
+
+    @Transactional
+    public GuiaAssinaturaResponse enviarParaAssinatura(String token, MultipartFile arquivo,
+                                                       com.eagle.fusex.model.dto.request.CadastroPacienteConfirmacaoDTO confirmacao) {
         SolicitacaoMedica solicitacao = buscarSolicitacao(token);
         TriagemPreGuia triagem = buscarTriagem(solicitacao);
         if (solicitacao.getDataConfirmacaoEmissao() == null) {
@@ -103,7 +109,7 @@ public class PreGuiaService {
         Paciente paciente = solicitacao.getPaciente();
         GuiaAssinaturaService.DadosPreGuia dados = new GuiaAssinaturaService.DadosPreGuia(
                 solicitacao, paciente.getNome(), paciente.getPrec(), paciente.getEmail(), triagem.getOcs().getOcsNome());
-        return guiaAssinaturaService.enviarGuiaParaAssinatura(arquivo, null, dados);
+        return guiaAssinaturaService.enviarGuiaParaAssinatura(arquivo, confirmacao, dados);
     }
 
     @Transactional(readOnly = true)

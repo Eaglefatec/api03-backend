@@ -24,6 +24,7 @@ public record GuiaAssinaturaResponse(
         LocalDate dataValidade,
         LocalDateTime dataEnvioEmail,
         StatusEmail statusEmail,
+        String motivoRejeicao,
         String mensagemPronta,
         String mensagem
 ) {

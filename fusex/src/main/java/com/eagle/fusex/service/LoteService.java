@@ -29,16 +29,19 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.StringReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -82,8 +85,9 @@ public class LoteService {
             throw new ValidationException("Selecione ao menos uma guia para gerar o lote");
         }
 
-        List<Guia> guias = guiaRepository.findAllById(guiaIds);
-        if (guias.size() != guiaIds.size()) {
+        List<Long> idsUnicos = new ArrayList<>(new LinkedHashSet<>(guiaIds));
+        List<Guia> guias = guiaRepository.findAllById(idsUnicos);
+        if (guias.size() != idsUnicos.size()) {
             throw new ResourceNotFoundException("Uma ou mais guias informadas não foram encontradas");
         }
         for (Guia guia : guias) {
@@ -104,8 +108,8 @@ public class LoteService {
         int numeroLote = (int) loteRepository.countByOcs_OcsIdAndCompetenciaAnoAndCompetenciaMes(
                 ocs.getOcsId(), competenciaAno, competenciaMes) + 1;
 
-        String faturaCaminho = fileStorageService.salvar(fatura, UUID.randomUUID() + "-" + extrairExtensao(fatura));
-        String espelhoCaminho = fileStorageService.salvar(espelho, UUID.randomUUID() + "-" + extrairExtensao(espelho));
+        String faturaCaminho = fileStorageService.salvar(fatura, UUID.randomUUID() + "." + extrairExtensao(fatura));
+        String espelhoCaminho = fileStorageService.salvar(espelho, UUID.randomUUID() + "." + extrairExtensao(espelho));
 
         Lote lote = new Lote();
         lote.setOcs(ocs);
@@ -216,37 +220,30 @@ public class LoteService {
         List<GuiaItem> itensParaSalvar = new ArrayList<>();
         List<Guia> guiasParaAtualizar = new ArrayList<>();
         Set<Guia> guiasSemValorNaGuia = new HashSet<>();
+        Map<String, Optional<BigDecimal>> cachePrecos = new HashMap<>();
 
         try (Workbook workbook = WorkbookFactory.create(is)) {
+            if (workbook.getNumberOfSheets() == 0) {
+                return;
+            }
             Sheet sheet = workbook.getSheetAt(0);
+            DataFormatter formatter = new DataFormatter();
+            FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
             log.info("Total de linhas no Excel do espelho: {}", sheet.getLastRowNum());
 
             for (Row row : sheet) {
                 if (row.getRowNum() == 0) continue;
 
                 // Ordem das colunas na planilha do espelho: Nº da Guia, Beneficiário, Prec CP, Código TUSS, Descrição, Tipo, Quantidade e Valor Unitário
-                String numeroGuia = getCellVal(row.getCell(0));
-                String beneficiarioNome = getCellVal(row.getCell(1));
-                String precCp = getCellVal(row.getCell(2));
-                String codigoTuss = getCellVal(row.getCell(3));
-                String descricao = getCellVal(row.getCell(4));
-                String tipo = getCellVal(row.getCell(5));
+                String numeroGuia = getCellVal(row.getCell(0), formatter, evaluator);
+                String beneficiarioNome = getCellVal(row.getCell(1), formatter, evaluator);
+                String precCp = getCellVal(row.getCell(2), formatter, evaluator);
+                String codigoTuss = getCellVal(row.getCell(3), formatter, evaluator);
+                String descricao = getCellVal(row.getCell(4), formatter, evaluator);
+                String tipo = getCellVal(row.getCell(5), formatter, evaluator);
 
-                int quantidade = 1;
-                try {
-                    Cell cellQtd = row.getCell(6);
-                    if (cellQtd != null) {
-                        quantidade = (int) cellQtd.getNumericCellValue();
-                    }
-                } catch (Exception ignored) {}
-
-                BigDecimal valorUnitario = BigDecimal.ZERO;
-                try {
-                    Cell cellVal = row.getCell(7);
-                    if (cellVal != null) {
-                        valorUnitario = BigDecimal.valueOf(cellVal.getNumericCellValue());
-                    }
-                } catch (Exception ignored) {}
+                int quantidade = parseQuantidade(getCellVal(row.getCell(6), formatter, evaluator), row.getCell(6));
+                BigDecimal valorUnitario = parseValorCelula(row.getCell(7), formatter, evaluator);
 
                 if (!numeroGuia.isEmpty() && guiasPorNumero.containsKey(numeroGuia)) {
                     Guia guia = guiasPorNumero.get(numeroGuia);
@@ -254,8 +251,8 @@ public class LoteService {
                             descricao.isEmpty() ? "Item sem descrição" : descricao,
                             tipo.isEmpty() ? "Procedimento" : tipo,
                             quantidade > 0 ? quantidade : 1, valorUnitario,
-                            guiasParaAtualizar, itensParaSalvar, guiasSemValorNaGuia);
-                } else {
+                            guiasParaAtualizar, itensParaSalvar, guiasSemValorNaGuia, cachePrecos);
+                } else if (!numeroGuia.isEmpty()) {
                     log.warn("Linha do Excel com Guia '{}' ignorada ou não encontrada nas guias selecionadas.", numeroGuia);
                 }
             }
@@ -276,11 +273,21 @@ public class LoteService {
         List<GuiaItem> itensParaSalvar = new ArrayList<>();
         List<Guia> guiasParaAtualizar = new ArrayList<>();
         Set<Guia> guiasSemValorNaGuia = new HashSet<>();
+        Map<String, Optional<BigDecimal>> cachePrecos = new HashMap<>();
 
-        try (Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+        String texto = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        if (texto.startsWith("\uFEFF")) {
+            texto = texto.substring(1);
+        }
+        char delimitador = detectarDelimitadorCsv(texto);
+
+        try (Reader reader = new StringReader(texto)) {
             Iterable<CSVRecord> records = CSVFormat.DEFAULT.builder()
+                    .setDelimiter(delimitador)
                     .setHeader()
                     .setSkipHeaderRecord(true)
+                    .setIgnoreEmptyLines(true)
+                    .setTrim(true)
                     .build()
                     .parse(reader);
             for (CSVRecord record : records) {
@@ -293,11 +300,8 @@ public class LoteService {
                 String descricao = record.get(4) != null ? record.get(4).trim() : "";
                 String tipo = record.get(5) != null ? record.get(5).trim() : "";
 
-                int quantidade = 1;
-                try { quantidade = Integer.parseInt(record.get(6).trim()); } catch (Exception ignored) {}
-
-                BigDecimal valorUnitario = BigDecimal.ZERO;
-                try { valorUnitario = new BigDecimal(record.get(7).trim()); } catch (Exception ignored) {}
+                int quantidade = parseQuantidade(record.get(6), null);
+                BigDecimal valorUnitario = parseValorMonetario(record.get(7));
 
                 if (!numeroGuia.isEmpty() && guiasPorNumero.containsKey(numeroGuia)) {
                     Guia guia = guiasPorNumero.get(numeroGuia);
@@ -305,7 +309,7 @@ public class LoteService {
                             descricao.isBlank() ? "Item sem descrição" : descricao,
                             tipo.isBlank() ? "Procedimento" : tipo,
                             quantidade > 0 ? quantidade : 1, valorUnitario,
-                            guiasParaAtualizar, itensParaSalvar, guiasSemValorNaGuia);
+                            guiasParaAtualizar, itensParaSalvar, guiasSemValorNaGuia, cachePrecos);
                 }
             }
         }
@@ -321,10 +325,80 @@ public class LoteService {
         }
     }
 
+    private char detectarDelimitadorCsv(String texto) {
+        int fimPrimeiraLinha = texto.indexOf('\n');
+        String primeiraLinha = fimPrimeiraLinha >= 0 ? texto.substring(0, fimPrimeiraLinha) : texto;
+        long pontoVirgula = primeiraLinha.chars().filter(c -> c == ';').count();
+        long virgula = primeiraLinha.chars().filter(c -> c == ',').count();
+        return pontoVirgula > virgula ? ';' : ',';
+    }
+
+    private int parseQuantidade(String raw, Cell cell) {
+        if (cell != null && cell.getCellType() == CellType.NUMERIC) {
+            int q = (int) Math.round(cell.getNumericCellValue());
+            return q > 0 ? q : 1;
+        }
+        if (raw == null || raw.isBlank()) {
+            return 1;
+        }
+        try {
+            String limpo = raw.trim().replace(",", ".");
+            int q = (int) Math.round(Double.parseDouble(limpo));
+            return q > 0 ? q : 1;
+        } catch (NumberFormatException e) {
+            return 1;
+        }
+    }
+
+    private BigDecimal parseValorCelula(Cell cell, DataFormatter formatter, FormulaEvaluator evaluator) {
+        if (cell == null) {
+            return BigDecimal.ZERO;
+        }
+        if (cell.getCellType() == CellType.NUMERIC) {
+            BigDecimal val = BigDecimal.valueOf(cell.getNumericCellValue());
+            if (val.signum() < 0) {
+                throw new ArquivoInvalidoException("Valor unitário não pode ser negativo no espelho.");
+            }
+            return val;
+        }
+        return parseValorMonetario(getCellVal(cell, formatter, evaluator));
+    }
+
+    private BigDecimal parseValorMonetario(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return BigDecimal.ZERO;
+        }
+        String limpo = raw.replace("R$", "").replace("\u00A0", "").trim();
+        if (limpo.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        if (limpo.contains(",") && limpo.contains(".")) {
+            int lastComma = limpo.lastIndexOf(',');
+            int lastDot = limpo.lastIndexOf('.');
+            if (lastComma > lastDot) {
+                limpo = limpo.replace(".", "").replace(",", ".");
+            } else {
+                limpo = limpo.replace(",", "");
+            }
+        } else if (limpo.contains(",")) {
+            limpo = limpo.replace(",", ".");
+        }
+        try {
+            BigDecimal val = new BigDecimal(limpo);
+            if (val.signum() < 0) {
+                throw new ArquivoInvalidoException("Valor unitário não pode ser negativo no espelho.");
+            }
+            return val;
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
+    }
+
     private void registrarItemNaGuia(Guia guia, String beneficiarioNome, String precCp, String codigoTuss,
                                      String descricao, String tipo, int quantidade, BigDecimal valorUnitario,
                                      List<Guia> guiasParaAtualizar, List<GuiaItem> itensParaSalvar,
-                                     Set<Guia> guiasSemValorNaGuia) {
+                                     Set<Guia> guiasSemValorNaGuia,
+                                     Map<String, Optional<BigDecimal>> cachePrecos) {
         if (!guiasParaAtualizar.contains(guia)) {
             guia.setValorFaturado(BigDecimal.ZERO);
             if (guia.getValorContratado() == null || guia.getValorContratado().signum() <= 0) {
@@ -345,11 +419,14 @@ public class LoteService {
         if (guiasSemValorNaGuia.contains(guia)
                 && ocsProcedimentoRepository != null && codigoTuss != null && !codigoTuss.isBlank()
                 && guia.getOcs() != null && guia.getOcs().getOcsId() != null) {
-            ocsProcedimentoRepository
-                    .findByOcs_OcsIdAndProcedimento_ProcCodigoDgp(guia.getOcs().getOcsId(), codigoTuss)
-                    .map(OcsProcedimento::getValor)
-                    .ifPresent(valorTabela -> guia.setValorContratado(
-                            guia.getValorContratado().add(valorTabela.multiply(qtd))));
+            Long ocsId = guia.getOcs().getOcsId();
+            String chave = ocsId + ":" + codigoTuss;
+            Optional<BigDecimal> valorOpt = cachePrecos.computeIfAbsent(chave, k ->
+                    ocsProcedimentoRepository
+                            .findByOcs_OcsIdAndProcedimento_ProcCodigoDgp(ocsId, codigoTuss)
+                            .map(OcsProcedimento::getValor));
+            valorOpt.ifPresent(valorTabela -> guia.setValorContratado(
+                    guia.getValorContratado().add(valorTabela.multiply(qtd))));
         }
 
         GuiaItem item = new GuiaItem();
@@ -364,10 +441,15 @@ public class LoteService {
         itensParaSalvar.add(item);
     }
 
-    private String getCellVal(Cell cell) {
+    private String getCellVal(Cell cell, DataFormatter formatter, FormulaEvaluator evaluator) {
         if (cell == null) return "";
+        if (cell.getCellType() == CellType.STRING) {
+            return cell.getStringCellValue().trim();
+        }
+        if (formatter != null) {
+            return formatter.formatCellValue(cell, evaluator).trim();
+        }
         return switch (cell.getCellType()) {
-            case STRING -> cell.getStringCellValue().trim();
             case NUMERIC -> {
                 double val = cell.getNumericCellValue();
                 if (val == Math.floor(val)) {

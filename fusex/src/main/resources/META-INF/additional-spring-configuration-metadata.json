@@ -1,0 +1,34 @@
+{
+  "properties": [
+    {
+      "name": "fusex.app.base-url",
+      "type": "java.lang.String",
+      "description": "URL base da aplicacao FUSEX para geracao de links publicos e QR Code."
+    },
+    {
+      "name": "fusex.mail.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Habilita o envio real de e-mails via SMTP."
+    },
+    {
+      "name": "fusex.mail.from",
+      "type": "java.lang.String",
+      "description": "Endereco de e-mail remetente das notificacoes do FUSEX."
+    },
+    {
+      "name": "fusex.storage.upload-dir",
+      "type": "java.lang.String",
+      "description": "Diretorio local para armazenamento de uploads (PDFs, faturas e espelhos)."
+    },
+    {
+      "name": "fusex.guia.numero-regex",
+      "type": "java.lang.String",
+      "description": "Expressao regular para extracao do numero da guia a partir do PDF."
+    },
+    {
+      "name": "fusex.guia.validade-dias",
+      "type": "java.lang.Integer",
+      "description": "Prazo de validade em dias da guia apos a 2a assinatura (Chefe da Secao)."
+    }
+  ]
+}

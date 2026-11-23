@@ -1,5 +1,6 @@
 package com.eagle.fusex.storage;
 
+import com.eagle.fusex.exception.ArquivoInvalidoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,7 +41,7 @@ public class LocalFileStorageService implements FileStorageService {
     @Override
     public String salvar(MultipartFile arquivo, String nomeDestino) {
         try {
-            Path destino = this.uploadPath.resolve(nomeDestino);
+            Path destino = resolverDestinoSeguro(nomeDestino);
             try (InputStream in = arquivo.getInputStream()) {
                 Files.copy(in, destino, StandardCopyOption.REPLACE_EXISTING);
             }
@@ -54,12 +55,24 @@ public class LocalFileStorageService implements FileStorageService {
     @Override
     public String salvar(byte[] conteudo, String nomeDestino) {
         try {
-            Path destino = this.uploadPath.resolve(nomeDestino);
+            Path destino = resolverDestinoSeguro(nomeDestino);
             Files.write(destino, conteudo);
             return destino.toString().replace("\\", "/");
         } catch (IOException e) {
             log.error("Erro ao salvar arquivo de bytes {}", nomeDestino, e);
             throw new RuntimeException("Erro ao salvar arquivo", e);
         }
+    }
+
+    private Path resolverDestinoSeguro(String nomeDestino) {
+        if (nomeDestino == null || nomeDestino.isBlank() || nomeDestino.contains("..")) {
+            throw new ArquivoInvalidoException("Nome de arquivo de destino inválido.");
+        }
+        Path base = this.uploadPath.toAbsolutePath().normalize();
+        Path destinoAbsoluto = base.resolve(nomeDestino).normalize();
+        if (!destinoAbsoluto.startsWith(base)) {
+            throw new ArquivoInvalidoException("Caminho de destino fora do diretório permitido.");
+        }
+        return this.uploadPath.resolve(destinoAbsoluto.getFileName());
     }
 }

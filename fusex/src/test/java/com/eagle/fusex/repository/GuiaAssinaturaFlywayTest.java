@@ -70,7 +70,7 @@ class GuiaAssinaturaFlywayTest {
         assertEquals("29", strictFlyway.info().current().getVersion().getVersion());
 
         try (StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
-                .applySetting(AvailableSettings.DATASOURCE, strictDs)
+                .applySetting(AvailableSettings.JAKARTA_NON_JTA_DATASOURCE, strictDs)
                 .applySetting(AvailableSettings.DIALECT, "org.hibernate.dialect.H2Dialect")
                 .applySetting(AvailableSettings.HBM2DDL_AUTO, "validate")
                 .applySetting(AvailableSettings.PHYSICAL_NAMING_STRATEGY,

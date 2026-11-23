@@ -153,9 +153,9 @@ public class TriagemPreGuiaService {
             return;
         }
 
-        List<String> codigos = vinculos.stream()
+        Set<String> codigos = vinculos.stream()
                 .map(v -> v.getProcedimento().getProcCodigoDgp())
-                .toList();
+                .collect(Collectors.toSet());
 
         long procedimentosCobertos = ocsProcedimentoRepository
                 .countByOcs_OcsIdAndProcedimento_ProcCodigoDgpIn(ocs.getOcsId(), codigos);

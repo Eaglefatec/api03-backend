@@ -125,13 +125,19 @@ public class GuiaAssinaturaService {
         String[] fallback = EXEMPLOS_FALLBACK[idxExemplo];
 
         String numeroGuia = extraidos.numeroGuia() != null ? extraidos.numeroGuia().trim() : null;
+        GuiaAssinatura guiaRejeitadaParaReenvio = null;
         if (numeroGuia != null && !numeroGuia.isBlank()) {
             if (numeroGuia.contains("..") || numeroGuia.matches(".*[\\p{Cntrl}].*")) {
                 throw new ArquivoInvalidoException("Número de guia inválido identificado no documento PDF.");
             }
             numeroGuia = truncar(numeroGuia, 100);
-            if (guiaAssinaturaRepository.existsByNumeroGuia(numeroGuia)) {
-                throw new ValidationException("A guia nº " + numeroGuia + " já foi enviada para a esteira de assinaturas.");
+            GuiaAssinatura existente = guiaAssinaturaRepository.findByNumeroGuia(numeroGuia).orElse(null);
+            if (existente != null || guiaAssinaturaRepository.existsByNumeroGuia(numeroGuia)) {
+                if (existente != null && existente.getStatus() == StatusEsteiraAssinatura.REJEITADA) {
+                    guiaRejeitadaParaReenvio = existente;
+                } else {
+                    throw new ValidationException("A guia nº " + numeroGuia + " já foi enviada para a esteira de assinaturas.");
+                }
             }
         } else {
             numeroGuia = gerarNumeroGuiaSequencialUnico();
@@ -203,7 +209,7 @@ public class GuiaAssinaturaService {
             if (pacienteCadastrado == null && precFinal != null && !precFinal.isBlank()) {
                 pacienteCadastrado = pacienteRepository.findByCpfPrec(precFinal).orElse(null);
             }
-            if (pacienteCadastrado == null && cpfFinal != null && !cpfFinal.isBlank()) {
+            if (pacienteCadastrado == null && !cpfFinal.isBlank()) {
                 pacienteCadastrado = pacienteRepository.findByCpf(cpfFinal).orElse(null);
             }
 
@@ -256,20 +262,31 @@ public class GuiaAssinaturaService {
         String nomeDestino = "guia_assinatura_" + slugGuia + "_" + UUID.randomUUID() + ".pdf";
         String caminhoSalvo = fileStorageService.salvar(bytesPdf, nomeDestino);
 
-        GuiaAssinatura guia = new GuiaAssinatura();
+        GuiaAssinatura guia = guiaRejeitadaParaReenvio != null ? guiaRejeitadaParaReenvio : new GuiaAssinatura();
         guia.setNumeroGuia(numeroGuia);
         guia.setBeneficiarioNome(beneficiarioNome);
         guia.setBeneficiarioPrecCp(beneficiarioPrec);
         guia.setBeneficiarioEmail(beneficiarioEmail);
         guia.setOcsNome(ocsNome);
         guia.setOcs(ocsEntidade);
-        guia.setSolicitacaoMedica(preGuia != null ? preGuia.solicitacao() : null);
+        guia.setSolicitacaoMedica(preGuia != null ? preGuia.solicitacao() : guia.getSolicitacaoMedica());
         guia.setProcedimentosResumo(pdfService.serializarProcedimentos(extraidos.procedimentos()));
         guia.setNomeArquivoOriginal(nomeOriginal);
         guia.setCaminhoArquivoOriginal(caminhoSalvo);
+        guia.setCaminhoArquivoAssinado(null);
         guia.setTamanhoBytes(arquivo.getSize());
         guia.setStatus(StatusEsteiraAssinatura.AGUARDANDO_MEDICO_CHEFE);
         guia.setDataEnvio(LocalDateTime.now());
+        guia.setMotivoRejeicao(null);
+        guia.setMedicoChefeUsuario(null);
+        guia.setDataAssinaturaMedico(null);
+        guia.setAssinaturaMedicoBase64(null);
+        guia.setChefeSecaoUsuario(null);
+        guia.setDataAssinaturaSecao(null);
+        guia.setAssinaturaSecaoBase64(null);
+        guia.setDataValidade(null);
+        guia.setDataEnvioEmail(null);
+        guia.setStatusEmail(null);
 
         guia = guiaAssinaturaRepository.save(guia);
         log.info("Guia nº {} registrada na esteira de assinaturas (Beneficiário: {}, OCS: {})",
@@ -301,6 +318,21 @@ public class GuiaAssinaturaService {
     public List<GuiaAssinaturaResponse> listarPendencias(String perfilParam, Authentication auth) {
         StatusEsteiraAssinatura statusAlvo = resolverStatusAlvoPorPerfilOuRole(perfilParam, auth);
         return guiaAssinaturaRepository.findByStatusOrderByDataEnvioAsc(statusAlvo).stream()
+                .map(g -> toResponse(g, null))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<GuiaAssinaturaResponse> listarAssinadas(String perfilParam, Authentication auth) {
+        StatusEsteiraAssinatura statusAlvo = resolverStatusAlvoPorPerfilOuRole(perfilParam, auth);
+        String username = auth != null ? auth.getName() : null;
+        if (username == null || username.isBlank()) {
+            return List.of();
+        }
+        List<GuiaAssinatura> assinadas = statusAlvo == StatusEsteiraAssinatura.AGUARDANDO_MEDICO_CHEFE
+                ? guiaAssinaturaRepository.findByMedicoChefeUsuarioOrderByDataAssinaturaMedicoDesc(username)
+                : guiaAssinaturaRepository.findByChefeSecaoUsuarioOrderByDataAssinaturaSecaoDesc(username);
+        return assinadas.stream()
                 .map(g -> toResponse(g, null))
                 .toList();
     }
@@ -352,16 +384,16 @@ public class GuiaAssinaturaService {
         String username = auth != null ? auth.getName() : "sistema";
         Set<String> roles = extrairRoles(auth);
 
-        if (guia.getStatus() == StatusEsteiraAssinatura.AGUARDANDO_MEDICO_CHEFE) {
-            validarPermissaoMedicoChefe(request.perfil(), roles);
-        } else if (guia.getStatus() == StatusEsteiraAssinatura.AGUARDANDO_CHEFE_SECAO) {
-            validarPermissaoChefeSecao(request.perfil(), roles);
-        } else {
-            if (request.decisao() == DecisaoAssinatura.REJEITAR) {
-                throw new ValidationException("Somente guias aguardando assinatura podem ser rejeitadas.");
+        switch (guia.getStatus()) {
+            case AGUARDANDO_MEDICO_CHEFE -> validarPermissaoMedicoChefe(request.perfil(), roles);
+            case AGUARDANDO_CHEFE_SECAO -> validarPermissaoChefeSecao(request.perfil(), roles);
+            default -> {
+                if (request.decisao() == DecisaoAssinatura.REJEITAR) {
+                    throw new ValidationException("Somente guias aguardando assinatura podem ser rejeitadas.");
+                }
+                throw new ValidationException("Esta guia não se encontra pendente de assinatura (status atual: "
+                        + guia.getStatus().getDescricao() + ").");
             }
-            throw new ValidationException("Esta guia não se encontra pendente de assinatura (status atual: "
-                    + guia.getStatus().getDescricao() + ").");
         }
 
         if (request.decisao() == DecisaoAssinatura.REJEITAR) {
@@ -497,8 +529,9 @@ public class GuiaAssinaturaService {
             String nomeAssinado = "guia_assinada_" + slugSeguroArquivo(guia.getNumeroGuia()) + "_" + UUID.randomUUID() + ".pdf";
             String caminhoAssinado = fileStorageService.salvar(pdfChancelado, nomeAssinado);
             guia.setCaminhoArquivoAssinado(caminhoAssinado);
-        } catch (Exception e) {
-            log.warn("Não foi possível gravar o PDF chancelado em disco para a guia {}: {}", guia.getNumeroGuia(), e.getMessage());
+        } catch (IOException | RuntimeException e) {
+            log.error("Não foi possível gravar o PDF chancelado em disco para a guia {}: {}", guia.getNumeroGuia(), e.getMessage());
+            throw new com.eagle.fusex.exception.BusinessException("Não foi possível gerar e salvar o PDF assinado da guia.");
         }
     }
 
@@ -548,8 +581,10 @@ public class GuiaAssinaturaService {
         if (arquivo == null || arquivo.isEmpty()) {
             throw new ArquivoInvalidoException("Selecione um arquivo PDF.");
         }
-        String nome = arquivo.getOriginalFilename() != null ? arquivo.getOriginalFilename().toLowerCase() : "";
-        String contentType = arquivo.getContentType() != null ? arquivo.getContentType().toLowerCase() : "";
+        String nomeOrig = arquivo.getOriginalFilename();
+        String tipoOrig = arquivo.getContentType();
+        String nome = nomeOrig != null ? nomeOrig.toLowerCase() : "";
+        String contentType = tipoOrig != null ? tipoOrig.toLowerCase() : "";
         boolean ehPdf = nome.endsWith(".pdf") || contentType.contains("pdf");
         if (!ehPdf) {
             throw new ArquivoInvalidoException("Selecione um arquivo PDF.");
@@ -780,9 +815,9 @@ public class GuiaAssinaturaService {
                 validade,
                 g.getDataEnvioEmail(),
                 g.getStatusEmail(),
+                g.getMotivoRejeicao(),
                 montarMensagemPronta(g),
                 mensagem
         );
     }
 }
-
