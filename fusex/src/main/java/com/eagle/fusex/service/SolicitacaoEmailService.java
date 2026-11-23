@@ -14,8 +14,6 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
-
 @Service
 public class SolicitacaoEmailService {
 
@@ -65,14 +63,15 @@ public class SolicitacaoEmailService {
 
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, StandardCharsets.UTF_8.name());
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
             helper.setFrom(remetente);
             helper.setTo(destinatario);
             helper.setSubject("FUSEX - Sua Solicitação Médica está Disponível");
 
-            String nomePaciente = solicitacao.getPaciente().getNome();
-            String nomeMedico = solicitacao.getMedico() != null ? solicitacao.getMedico().getNome() : "Médico Militar";
+            String nomePaciente = escapeHtml(solicitacao.getPaciente().getNome());
+            String nomeMedico = escapeHtml(solicitacao.getMedico() != null ? solicitacao.getMedico().getNome() : "Médico Militar");
+            String linkSeguro = escapeHtml(link);
 
             String html = """
                 <!DOCTYPE html>
@@ -107,7 +106,7 @@ public class SolicitacaoEmailService {
                     </div>
                 </body>
                 </html>
-                """.formatted(nomePaciente, nomeMedico, link, link, link);
+                """.formatted(nomePaciente, nomeMedico, linkSeguro, linkSeguro, linkSeguro);
 
             helper.setText(html, true);
             helper.addInline("qrcode", new ByteArrayResource(qrCodeBytes), "image/png");
@@ -125,5 +124,14 @@ public class SolicitacaoEmailService {
             log.error("Erro inesperado ao enviar e-mail para {}: {}", destinatario, e.getMessage(), e);
             return ResultadoEnvioEmail.falhaInvalido("Erro inesperado: " + e.getMessage());
         }
+    }
+
+    private String escapeHtml(String valor) {
+        if (valor == null) return "";
+        return valor.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 }

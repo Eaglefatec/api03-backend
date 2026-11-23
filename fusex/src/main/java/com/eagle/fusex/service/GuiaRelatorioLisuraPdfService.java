@@ -154,7 +154,8 @@ public class GuiaRelatorioLisuraPdfService {
 
     private static BigDecimal subtotal(GuiaItem item) {
         BigDecimal unitario = item.getValorUnitario() != null ? item.getValorUnitario() : BigDecimal.ZERO;
-        int quantidade = item.getQuantidade() != null ? item.getQuantidade() : 0;
+        Integer qtdObj = item.getQuantidade();
+        int quantidade = qtdObj != null ? qtdObj : 0;
         return unitario.multiply(BigDecimal.valueOf(quantidade));
     }
 
@@ -179,10 +180,10 @@ public class GuiaRelatorioLisuraPdfService {
         boolean semPrecoContratado() {
             return contratado.signum() <= 0;
         }
+    }
 
-        Glosa ultimaGlosa() {
-            return glosas.isEmpty() ? null : glosas.get(glosas.size() - 1);
-        }
+    private static Glosa obterUltimaGlosa(List<Glosa> listaGlosas) {
+        return listaGlosas.isEmpty() ? null : listaGlosas.get(listaGlosas.size() - 1);
     }
 
     private static final class Relatorio {
@@ -265,7 +266,7 @@ public class GuiaRelatorioLisuraPdfService {
             String textoDiferenca = semPreco ? "Não calculada"
                     : diferenca.signum() == 0 ? "Sem divergência"
                     : (diferenca.signum() > 0 ? "+" : "-") + moeda(diferenca.abs());
-            Glosa ultima = dados.ultimaGlosa();
+            Glosa ultima = obterUltimaGlosa(dados.glosas());
             String revisado = ultima != null ? moeda(ultima.getValorGlosa())
                     : !semPreco && diferenca.signum() == 0 ? moeda(dados.espelho()) : "Sem revisão";
             String[][] caixas = {
@@ -320,7 +321,8 @@ public class GuiaRelatorioLisuraPdfService {
                 for (int i = 0; i < descricao.size(); i++) {
                     escrever(normal, 8.5f, TEXTO, descricao.get(i), x[2], base - i * 11);
                 }
-                aDireita(normal, 8.5f, TEXTO, String.valueOf(item.getQuantidade() != null ? item.getQuantidade() : 0), qtd, base);
+                Integer qtdItem = item.getQuantidade();
+                aDireita(normal, 8.5f, TEXTO, String.valueOf(qtdItem != null ? qtdItem : 0), qtd, base);
                 aDireita(normal, 8.5f, TEXTO, moeda(item.getValorUnitario()), unitario, base);
                 aDireita(normal, 8.5f, TEXTO, moeda(subtotal(item)), subtotal, base);
                 y -= altura;
@@ -389,7 +391,7 @@ public class GuiaRelatorioLisuraPdfService {
             float direita = MARGEM + coluna + 30;
             retaH(MARGEM, MARGEM + coluna, base, TEXTO, 0.9f);
             retaH(direita, MARGEM + largura, base, TEXTO, 0.9f);
-            Glosa ultima = dados.ultimaGlosa();
+            Glosa ultima = obterUltimaGlosa(dados.glosas());
             String auditor = ultima != null && ultima.getAuditor() != null && !ultima.getAuditor().isBlank()
                     ? ultima.getAuditor().trim()
                     : "Auditor responsável";

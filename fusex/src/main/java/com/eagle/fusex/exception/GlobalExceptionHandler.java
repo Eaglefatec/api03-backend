@@ -148,8 +148,24 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Parâmetros de requisição inválidos ou ausentes: " + ex.getMessage());
     }
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodArgumentTypeMismatchException(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Parâmetro inválido: " + ex.getName());
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpRequestMethodNotSupportedException(
+            org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, "Método HTTP não suportado: " + ex.getMethod());
+    }
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
+    public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) throws Exception {
+        if (ex instanceof org.springframework.security.access.AccessDeniedException
+                || ex instanceof org.springframework.security.core.AuthenticationException) {
+            throw ex;
+        }
         log.error("Erro interno do servidor: ", ex);
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno do servidor");
     }

@@ -61,7 +61,7 @@ class LoteServiceTest {
     private Ocs outraOcs;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new LoteService(loteRepository, guiaRepository, guiaItemRepository, ocsRepository,
                 fileStorageService, ocsProcedimentoRepository);
@@ -78,7 +78,7 @@ class LoteServiceTest {
     }
 
     @AfterEach
-    void tearDown() {
+    public void tearDown() {
         SecurityContextHolder.clearContext();
     }
 
@@ -124,7 +124,7 @@ class LoteServiceTest {
         MockMultipartFile fatura = new MockMultipartFile("fatura", "fatura.pdf", "application/pdf", new byte[]{1});
         MockMultipartFile espelho = new MockMultipartFile("espelho", "espelho.pdf", "application/pdf", new byte[]{1});
 
-        assertThrows(ValidationException.class, () -> service.gerarLote(List.of(), fatura, espelho));
+        assertNotNull(assertThrows(ValidationException.class, () -> service.gerarLote(List.of(), fatura, espelho)));
     }
 
     @Test
@@ -136,7 +136,7 @@ class LoteServiceTest {
         MockMultipartFile fatura = new MockMultipartFile("fatura", "fatura.pdf", "application/pdf", new byte[]{1});
         MockMultipartFile espelho = new MockMultipartFile("espelho", "espelho.pdf", "application/pdf", new byte[]{1});
 
-        assertThrows(ValidationException.class, () -> service.gerarLote(List.of(1L), fatura, espelho));
+        assertNotNull(assertThrows(ValidationException.class, () -> service.gerarLote(List.of(1L), fatura, espelho)));
     }
 
     @Test
@@ -148,7 +148,7 @@ class LoteServiceTest {
         MockMultipartFile fatura = new MockMultipartFile("fatura", "fatura.pdf", "application/pdf", new byte[]{1});
         MockMultipartFile espelho = new MockMultipartFile("espelho", "espelho.pdf", "application/pdf", new byte[]{1});
 
-        assertThrows(ValidationException.class, () -> service.gerarLote(List.of(1L), fatura, espelho));
+        assertNotNull(assertThrows(ValidationException.class, () -> service.gerarLote(List.of(1L), fatura, espelho)));
     }
 
     @Test
@@ -159,7 +159,7 @@ class LoteServiceTest {
         MockMultipartFile fatura = new MockMultipartFile("fatura", "fatura.pdf", "application/pdf", new byte[]{1});
         MockMultipartFile espelho = new MockMultipartFile("espelho", "espelho.pdf", "application/pdf", new byte[]{1});
 
-        assertThrows(ResourceNotFoundException.class, () -> service.gerarLote(List.of(99L), fatura, espelho));
+        assertNotNull(assertThrows(ResourceNotFoundException.class, () -> service.gerarLote(List.of(99L), fatura, espelho)));
     }
 
     @Test
@@ -171,7 +171,7 @@ class LoteServiceTest {
         MockMultipartFile fatura = new MockMultipartFile("fatura", "fatura.docx", "application/octet-stream", new byte[]{1});
         MockMultipartFile espelho = new MockMultipartFile("espelho", "espelho.pdf", "application/pdf", new byte[]{1});
 
-        assertThrows(ArquivoInvalidoException.class, () -> service.gerarLote(List.of(1L), fatura, espelho));
+        assertNotNull(assertThrows(ArquivoInvalidoException.class, () -> service.gerarLote(List.of(1L), fatura, espelho)));
     }
 
     @Test
@@ -255,5 +255,37 @@ class LoteServiceTest {
 
         assertEquals(0, new BigDecimal("15.74").compareTo(guia.getValorContratado()));
         assertEquals(0, new BigDecimal("22.50").compareTo(guia.getValorFaturado()));
+    }
+
+    @Test
+    void testGerarLote_ComEspelhoCsvPontoEVirgulaEMoedaPtBr_FazParseCorretamente() {
+        when(ocsRepository.findByLoginUsuario("ocs")).thenReturn(Optional.of(ocsLogada));
+        Guia guia = criarGuia(1L, ocsLogada, StatusGuia.SEM_LOTE);
+        when(guiaRepository.findAllById(List.of(1L))).thenReturn(List.of(guia));
+        when(loteRepository.countByOcs_OcsIdAndCompetenciaAnoAndCompetenciaMes(eq(1L), anyInt(), anyInt())).thenReturn(0L);
+        when(fileStorageService.salvar(any(MultipartFile.class), anyString())).thenReturn("uploads/arquivo");
+        when(loteRepository.save(any(Lote.class))).thenAnswer(inv -> {
+            Lote l = inv.getArgument(0);
+            l.setId(40L);
+            return l;
+        });
+
+        OcsProcedimento precoTuss = new OcsProcedimento();
+        precoTuss.setValor(new BigDecimal("1000.00"));
+        when(ocsProcedimentoRepository.findByOcs_OcsIdAndProcedimento_ProcCodigoDgp(1L, "40301010"))
+                .thenReturn(Optional.of(precoTuss));
+
+        String csvPtBr = """
+                \uFEFFnumero_guia;beneficiario;prec_cp;codigo_tuss;descricao;tipo;quantidade;valor_unitario
+                G-1;Joao Silva;112233;40301010;Exame Complexo;Procedimento;2;"R$ 1.250,50"
+                """;
+        MockMultipartFile fatura = new MockMultipartFile("fatura", "fatura.pdf", "application/pdf", new byte[]{1});
+        MockMultipartFile espelho = new MockMultipartFile(
+                "espelho", "espelho_ptbr.csv", "text/csv", csvPtBr.getBytes(StandardCharsets.UTF_8));
+
+        service.gerarLote(List.of(1L, 1L), fatura, espelho);
+
+        assertEquals(0, new BigDecimal("2501.00").compareTo(guia.getValorFaturado()));
+        assertEquals(0, new BigDecimal("2000.00").compareTo(guia.getValorContratado()));
     }
 }

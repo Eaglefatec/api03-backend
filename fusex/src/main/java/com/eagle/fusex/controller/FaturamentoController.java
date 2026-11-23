@@ -71,15 +71,30 @@ public class FaturamentoController {
     }
 
     private ResponseEntity<byte[]> responderArquivo(ArquivoLoteDownload arquivo) {
-        MediaType tipo = arquivo.tipo() != null
-                ? MediaType.parseMediaType(arquivo.tipo())
-                : MediaType.APPLICATION_OCTET_STREAM;
+        MediaType tipo = resolverMediaTypeSeguro(arquivo.tipo(), arquivo.nome());
         ContentDisposition disposicao = ContentDisposition.inline()
-                .filename(arquivo.nome(), StandardCharsets.UTF_8)
+                .filename(arquivo.nome() != null ? arquivo.nome() : "arquivo", StandardCharsets.UTF_8)
                 .build();
         return ResponseEntity.ok()
                 .contentType(tipo)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposicao.toString())
+                .header("X-Content-Type-Options", "nosniff")
                 .body(arquivo.conteudo());
+    }
+
+    private MediaType resolverMediaTypeSeguro(String raw, String nome) {
+        String n = nome != null ? nome.toLowerCase() : "";
+        if (n.endsWith(".pdf")) return MediaType.APPLICATION_PDF;
+        if (n.endsWith(".csv")) return MediaType.parseMediaType("text/csv");
+        if (n.endsWith(".xlsx")) return MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        if (raw != null) {
+            String r = raw.trim().toLowerCase();
+            if (r.equals("application/pdf")) return MediaType.APPLICATION_PDF;
+            if (r.startsWith("text/csv")) return MediaType.parseMediaType("text/csv");
+            if (r.contains("spreadsheetml") || r.contains("excel")) {
+                return MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            }
+        }
+        return MediaType.APPLICATION_OCTET_STREAM;
     }
 }

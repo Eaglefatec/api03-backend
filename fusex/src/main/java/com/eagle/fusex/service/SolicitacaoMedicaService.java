@@ -105,7 +105,7 @@ public class SolicitacaoMedicaService {
 
         if (resultadoEmail != null) {
             salva.setStatusEmail(resultadoEmail.status());
-            salva.setEmailUltimoErro(resultadoEmail.mensagem());
+            salva.setEmailUltimoErro(truncarErro(resultadoEmail.mensagem()));
             if (resultadoEmail.status() == StatusEmail.PENDENTE_REENVIO) {
                 salva.setEmailTentativas(1);
                 salva.setEmailProximaTentativa(LocalDateTime.now().plusMinutes(2));
@@ -162,11 +162,13 @@ public class SolicitacaoMedicaService {
 
         if (resultado != null) {
             solicitacao.setStatusEmail(resultado.status());
-            solicitacao.setEmailUltimoErro(resultado.mensagem());
-            solicitacao.setEmailTentativas(solicitacao.getEmailTentativas() + 1);
+            solicitacao.setEmailUltimoErro(truncarErro(resultado.mensagem()));
+            Integer tentObj = solicitacao.getEmailTentativas();
+            int tentativasAtuais = tentObj != null ? tentObj : 0;
+            solicitacao.setEmailTentativas(tentativasAtuais + 1);
             if (resultado.status() == StatusEmail.PENDENTE_REENVIO) {
                 solicitacao.setEmailProximaTentativa(LocalDateTime.now().plusMinutes(2));
-            } else if (resultado.status() == StatusEmail.ENVIADO) {
+            } else {
                 solicitacao.setEmailProximaTentativa(null);
             }
             solicitacaoRepository.save(solicitacao);
@@ -224,19 +226,31 @@ public class SolicitacaoMedicaService {
 
     private void persistirProcedimentos(SolicitacaoMedica solicitacao,
                                         List<CriarSolicitacaoRequest.ProcedimentoQuantidade> procedimentosRequest) {
-        List<SolicitacaoProcedimento> vinculos = procedimentosRequest.stream()
-                .map(pq -> {
-                    Procedimento procedimento = procedimentoRepository.findById(pq.getProcedimentoCodigoDgp())
+        java.util.Map<String, Integer> quantidadesPorCodigo = new java.util.LinkedHashMap<>();
+        for (CriarSolicitacaoRequest.ProcedimentoQuantidade pq : procedimentosRequest) {
+            String codigo = pq.getProcedimentoCodigoDgp();
+            Integer qtdObj = pq.getQuantidade();
+            int qtd = qtdObj != null && qtdObj > 0 ? qtdObj : 1;
+            quantidadesPorCodigo.merge(codigo, qtd, Integer::sum);
+        }
+        List<SolicitacaoProcedimento> vinculos = quantidadesPorCodigo.entrySet().stream()
+                .map(entry -> {
+                    Procedimento procedimento = procedimentoRepository.findById(entry.getKey())
                             .orElseThrow(() -> new ProcedimentoInvalidoException(
-                                    "Procedimento inválido: " + pq.getProcedimentoCodigoDgp()));
+                                    "Procedimento inválido: " + entry.getKey()));
                     SolicitacaoProcedimento sp = new SolicitacaoProcedimento();
                     sp.setSolicitacaoMedica(solicitacao);
                     sp.setProcedimento(procedimento);
-                    sp.setQuantidade(pq.getQuantidade());
+                    sp.setQuantidade(entry.getValue());
                     return sp;
                 })
                 .toList();
         solicitacaoProcedimentoRepository.saveAll(vinculos);
+    }
+
+    private String truncarErro(String msg) {
+        if (msg == null) return null;
+        return msg.length() <= 500 ? msg : msg.substring(0, 500);
     }
 
     private void invalidarSolicitacaoAnterior(Long medicoId, Long pacienteId) {

@@ -11,7 +11,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -27,7 +26,7 @@ class ProcedimentoServiceTest {
     private ProcedimentoService service;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 
@@ -35,7 +34,6 @@ class ProcedimentoServiceTest {
     @DisplayName("Deve buscar procedimentos sem especialidade usando busca geral")
     void deveBuscarSemEspecialidade() {
         Procedimento p1 = new Procedimento("DGP001", "Consulta Ortopédica", 1);
-        Procedimento p2 = new Procedimento("DGP002", "Ecocardiograma", 1);
 
         when(procedimentoRepository.findTop50ByDescricaoOuCodigo("Consulta"))
                 .thenReturn(List.of(p1));
@@ -69,4 +67,3 @@ class ProcedimentoServiceTest {
                 .findTop20ByDescricaoAndEspecialidades("Fratura", especialidades);
     }
 }
-

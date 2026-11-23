@@ -71,7 +71,7 @@ class GuiaAssinaturaServiceTest {
     private GuiaAssinaturaService service;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         MockitoAnnotations.openMocks(this);
         pdfService = new GuiaAssinaturaPdfService("(?i)guia\\s+de\\s+encaminhamento\\s+n[ºr°.]*\\s*:?\\s*([A-Z0-9./-]{4,})");
         service = new GuiaAssinaturaService(
@@ -154,8 +154,8 @@ class GuiaAssinaturaServiceTest {
     void deveRejeitarArquivoNaoPdf() {
         MockMultipartFile arquivoTxt = new MockMultipartFile("arquivo", "documento.txt", "text/plain", "conteudo".getBytes());
 
-        assertThrows(ArquivoInvalidoException.class,
-                () -> service.enviarGuiaParaAssinatura(arquivoTxt));
+        assertNotNull(assertThrows(ArquivoInvalidoException.class,
+                () -> service.enviarGuiaParaAssinatura(arquivoTxt)));
     }
 
     @Test
@@ -235,11 +235,11 @@ class GuiaAssinaturaServiceTest {
 
         DecisaoAssinaturaRequest reqSemCheck = new DecisaoAssinaturaRequest(
                 DecisaoAssinatura.APROVAR, "med", false, ASSINATURA_PNG_BASE64, null);
-        assertThrows(ValidationException.class, () -> service.processarDecisao(1L, reqSemCheck, authMed));
+        assertNotNull(assertThrows(ValidationException.class, () -> service.processarDecisao(1L, reqSemCheck, authMed)));
 
         DecisaoAssinaturaRequest reqSemCanvas = new DecisaoAssinaturaRequest(
                 DecisaoAssinatura.APROVAR, "med", true, "   ", null);
-        assertThrows(ValidationException.class, () -> service.processarDecisao(1L, reqSemCanvas, authMed));
+        assertNotNull(assertThrows(ValidationException.class, () -> service.processarDecisao(1L, reqSemCanvas, authMed)));
     }
 
     @Test
@@ -264,7 +264,7 @@ class GuiaAssinaturaServiceTest {
 
         DecisaoAssinaturaRequest reqSecPrecoce = new DecisaoAssinaturaRequest(
                 DecisaoAssinatura.APROVAR, "sec", true, ASSINATURA_PNG_BASE64, null);
-        assertThrows(UnauthorizedOperationException.class, () -> service.processarDecisao(1L, reqSecPrecoce, authSec));
+        assertNotNull(assertThrows(UnauthorizedOperationException.class, () -> service.processarDecisao(1L, reqSecPrecoce, authSec)));
 
         DecisaoAssinaturaRequest reqMed = new DecisaoAssinaturaRequest(
                 DecisaoAssinatura.APROVAR, "med", true, ASSINATURA_PNG_BASE64, null);
@@ -363,11 +363,11 @@ class GuiaAssinaturaServiceTest {
 
         DecisaoAssinaturaRequest rejSec = new DecisaoAssinaturaRequest(
                 DecisaoAssinatura.REJEITAR, "sec", false, null, "Fora da vez");
-        assertThrows(UnauthorizedOperationException.class, () -> service.processarDecisao(10L, rejSec, authSec));
+        assertNotNull(assertThrows(UnauthorizedOperationException.class, () -> service.processarDecisao(10L, rejSec, authSec)));
 
         DecisaoAssinaturaRequest rejMed = new DecisaoAssinaturaRequest(
                 DecisaoAssinatura.REJEITAR, "med", false, null, "Fora da vez");
-        assertThrows(UnauthorizedOperationException.class, () -> service.processarDecisao(11L, rejMed, authMed));
+        assertNotNull(assertThrows(UnauthorizedOperationException.class, () -> service.processarDecisao(11L, rejMed, authMed)));
     }
 
     @Test
@@ -375,7 +375,7 @@ class GuiaAssinaturaServiceTest {
     void deveRejeitarPdfFalsoEAssinaturaBase64Invalida() {
         MockMultipartFile falsoPdf = new MockMultipartFile(
                 "arquivo", "falso.pdf", "application/pdf", "Isto nao eh um PDF real".getBytes());
-        assertThrows(ArquivoInvalidoException.class, () -> service.enviarGuiaParaAssinatura(falsoPdf));
+        assertNotNull(assertThrows(ArquivoInvalidoException.class, () -> service.enviarGuiaParaAssinatura(falsoPdf)));
 
         GuiaAssinatura guia = new GuiaAssinatura();
         guia.setId(12L);
@@ -388,7 +388,7 @@ class GuiaAssinaturaServiceTest {
 
         DecisaoAssinaturaRequest reqXss = new DecisaoAssinaturaRequest(
                 DecisaoAssinatura.APROVAR, "med", true, "data:image/png;base64,\" onerror=\"alert(1)", null);
-        assertThrows(ValidationException.class, () -> service.processarDecisao(12L, reqXss, authMed));
+        assertNotNull(assertThrows(ValidationException.class, () -> service.processarDecisao(12L, reqXss, authMed)));
     }
 
     @Test
@@ -407,7 +407,7 @@ class GuiaAssinaturaServiceTest {
         when(emailService.enviarEmailGuiaAssinada(any(), any(), anyString()))
                 .thenReturn(ResultadoEnvioEmail.falhaConexao("Falha SMTP timeout"));
 
-        assertThrows(ValidationException.class, () -> service.enviarEmailBeneficiario(13L));
+        assertNotNull(assertThrows(ValidationException.class, () -> service.enviarEmailBeneficiario(13L)));
         assertEquals(StatusEsteiraAssinatura.AGUARDANDO_ENVIO_BENEFICIARIO, guia.getStatus());
         verify(guiaAssinaturaRepository, never()).save(any());
     }
@@ -454,7 +454,7 @@ class GuiaAssinaturaServiceTest {
 
         byte[] pdfTraversal = gerarPdfGuiaValido("../../evil", "Teste", "34123456789", "Hospital Policlin S/A");
         MockMultipartFile arqTraversal = new MockMultipartFile("arquivo", "evil.pdf", "application/pdf", pdfTraversal);
-        assertThrows(ArquivoInvalidoException.class, () -> service.enviarGuiaParaAssinatura(arqTraversal));
+        assertNotNull(assertThrows(ArquivoInvalidoException.class, () -> service.enviarGuiaParaAssinatura(arqTraversal)));
     }
 
     @Test
@@ -470,13 +470,13 @@ class GuiaAssinaturaServiceTest {
                 "medicochefe", "senha123", List.of(new SimpleGrantedAuthority("ROLE_MEDICO_CHEFE")));
         DecisaoAssinaturaRequest reqTextoBase64 = new DecisaoAssinaturaRequest(
                 DecisaoAssinatura.APROVAR, "med", true, "data:image/png;base64,dGVzdGU=", null);
-        assertThrows(ValidationException.class, () -> service.processarDecisao(15L, reqTextoBase64, authMedChefe));
+        assertNotNull(assertThrows(ValidationException.class, () -> service.processarDecisao(15L, reqTextoBase64, authMedChefe)));
 
         Authentication authMedicoComum = new UsernamePasswordAuthenticationToken(
                 "medico", "senha123", List.of(new SimpleGrantedAuthority("ROLE_MEDICO")));
         DecisaoAssinaturaRequest reqMedicoComum = new DecisaoAssinaturaRequest(
                 DecisaoAssinatura.APROVAR, "med", true, ASSINATURA_PNG_BASE64, null);
-        assertThrows(UnauthorizedOperationException.class, () -> service.processarDecisao(15L, reqMedicoComum, authMedicoComum));
+        assertNotNull(assertThrows(UnauthorizedOperationException.class, () -> service.processarDecisao(15L, reqMedicoComum, authMedicoComum)));
     }
 
     @Test
@@ -517,5 +517,30 @@ class GuiaAssinaturaServiceTest {
         List<GuiaAssinaturaResponse> assinadasSec = service.listarAssinadas("sec", authSec);
         assertEquals(1, assinadasSec.size());
         assertEquals("202610922", assinadasSec.get(0).numeroGuia());
+    }
+
+    @Test
+    @DisplayName("Deve permitir reenviar guia com o mesmo número quando a anterior estiver REJEITADA")
+    void devePermitirReenviarGuiaRejeitadaComMesmoNumero() throws Exception {
+        byte[] pdfBytes = gerarPdfGuiaValido("202610999", "Carlos Eduardo Rocha", "34911223344", "Hospital Policlin S/A");
+        MockMultipartFile arquivo = new MockMultipartFile("arquivo", "guia_202610999_corrigida.pdf", "application/pdf", pdfBytes);
+
+        GuiaAssinatura guiaRejeitada = new GuiaAssinatura();
+        guiaRejeitada.setId(99L);
+        guiaRejeitada.setNumeroGuia("202610999");
+        guiaRejeitada.setStatus(StatusEsteiraAssinatura.REJEITADA);
+        guiaRejeitada.setMotivoRejeicao("Faltou carimbo");
+
+        when(pacienteRepository.findByCpfPrec("34911223344")).thenReturn(Optional.of(
+                new com.eagle.fusex.model.entity.Paciente("Carlos Eduardo Rocha", "34911223344", "34911223344", "FUSEX", "carlos@email.com.br")));
+        when(guiaAssinaturaRepository.findByNumeroGuia("202610999")).thenReturn(Optional.of(guiaRejeitada));
+        when(fileStorageService.salvar(any(byte[].class), anyString())).thenReturn("uploads/guia_202610999_v2.pdf");
+        when(guiaAssinaturaRepository.save(any(GuiaAssinatura.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        GuiaAssinaturaResponse resp = service.enviarGuiaParaAssinatura(arquivo);
+
+        assertEquals(99L, resp.id());
+        assertEquals(StatusEsteiraAssinatura.AGUARDANDO_MEDICO_CHEFE, resp.status());
+        assertNull(resp.motivoRejeicao());
     }
 }

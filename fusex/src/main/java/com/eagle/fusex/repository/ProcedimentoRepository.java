@@ -24,6 +24,7 @@ public interface ProcedimentoRepository extends JpaRepository<Procedimento, Stri
            OR p.procCodigoDgp LIKE CONCAT('%', :busca, '%'))
           AND esp IN (:especialidades)
         ORDER BY p.procDescricao ASC
+        LIMIT 20
     """)
     List<Procedimento> findTop20ByDescricaoAndEspecialidades(
         @Param("busca") String busca,
@@ -47,6 +48,7 @@ public interface ProcedimentoRepository extends JpaRepository<Procedimento, Stri
         WHERE LOWER(p.procDescricao) LIKE LOWER(CONCAT('%', :busca, '%'))
            OR p.procCodigoDgp LIKE CONCAT('%', :busca, '%')
         ORDER BY p.procDescricao ASC
+        LIMIT 50
     """)
     List<Procedimento> findTop50ByDescricaoOuCodigo(
         @Param("busca") String busca

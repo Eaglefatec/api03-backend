@@ -15,6 +15,7 @@ import com.eagle.fusex.storage.FileStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -44,6 +45,7 @@ public class EncaminhamentoService {
         return enviarEncaminhamento(medicoId, null, arquivo);
     }
 
+    @Transactional
     public EncaminhamentoResponse enviarEncaminhamento(Long medicoId, Long solicitacaoId, MultipartFile arquivo) {
         Medico medico = validarMedico(medicoId);
         SolicitacaoMedica solicitacao = solicitacaoId == null ? null : solicitacaoRepository.findById(solicitacaoId)
@@ -63,7 +65,7 @@ public class EncaminhamentoService {
         encaminhamento.setDataHora(dataHora);
         encaminhamento.setNomeArquivo(nomeArquivoOriginal);
         encaminhamento.setCaminhoArquivo(caminhoArquivo);
-        encaminhamento.setTipoArquivo(arquivo.getContentType());
+        encaminhamento.setTipoArquivo(resolverTipoSeguro(extensao));
         encaminhamento.setTamanhoBytes(arquivo.getSize());
         encaminhamento.setStatus(StatusEncaminhamento.ENVIADO);
 
@@ -116,5 +118,14 @@ public class EncaminhamentoService {
             return "bin";
         }
         return nomeArquivo.substring(nomeArquivo.lastIndexOf(".") + 1).toLowerCase();
+    }
+
+    private String resolverTipoSeguro(String extensao) {
+        return switch (extensao) {
+            case "pdf" -> "application/pdf";
+            case "png" -> "image/png";
+            case "jpg", "jpeg" -> "image/jpeg";
+            default -> "application/octet-stream";
+        };
     }
 }

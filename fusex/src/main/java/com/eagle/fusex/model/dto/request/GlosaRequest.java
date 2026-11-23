@@ -1,6 +1,8 @@
 package com.eagle.fusex.model.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 
 public class GlosaRequest {
@@ -10,10 +12,11 @@ public class GlosaRequest {
 
     private String codigoTuss;
 
-    @NotNull(message = "A justificativa militar é obrigatória")
+    @NotBlank(message = "A justificativa militar é obrigatória")
     private String justificativaMilitar;
 
     @NotNull(message = "O valor da glosa é obrigatório")
+    @PositiveOrZero(message = "O valor da glosa não pode ser negativo")
     private BigDecimal valorGlosa;
 
     private String conclusao;
